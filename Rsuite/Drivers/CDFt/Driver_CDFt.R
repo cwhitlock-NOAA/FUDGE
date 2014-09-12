@@ -194,7 +194,6 @@ for (predictor.var in predictor.vars){
 
   ####Precipitation changes go here
   if(predictor.var=='pr'){
-    
     print("Number of NAs in var:")
     print(sum(is.na(list.hist$clim.in)))
     print("Number of zeroes in var:")
