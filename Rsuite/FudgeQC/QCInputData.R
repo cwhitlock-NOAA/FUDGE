@@ -26,17 +26,18 @@
 #' TODO: Are there other checks that should be run? 
 #' 
 
-QCInputData <- function(train.predictor, train.target, esd.gen, k=0, ds.method="none", missval.threshold = NA){
+QCInputData <- function(train.predictor, train.target, esd.gen, k=0, ds.method="none", missval.threshold = NA, 
+                        allow.discontinuous.time.series=FALSE){
   #Inititalize list of data to be checked
   #arg.list <- c(train.predictor, train.target, esd.gen)
   arg.names <- c("train.predictor", "train.target", "esd.gen")
   #Check for cntaining nothing but missing values
   for (arg in 1:length(arg.names)){
     arg.data <- eval(parse(text=paste(arg.names[arg],"$clim.in", sep="")))
+    arg.filename <- eval(parse(text=paste("attr(", arg.names[arg],",filename)", sep="")))
     if( sum(!is.na(arg.data))==0){
       stop(paste("Missing value error:", arg.names[arg], "contained all NA values."))
     }
-  }
 #   if(sum(!is.na(train.predictor$clim.in)==0 || sum(!is.na(train.predictor$clim.in))==0 || 
 #                                                      sum(!is.na(train.predictor$clim.in))==0)){
 #     stop(paste("Missing value error: one or more of", "contained all NA values."))
@@ -44,9 +45,7 @@ QCInputData <- function(train.predictor, train.target, esd.gen, k=0, ds.method="
   message("Passed all missing value check")
   #Check for more missing values than the threshold. Currently a percentage, 
   #but that can change. 
-  if (!is.na(missval.threshold)){
-    for (arg in 1:length(arg.names)){
-      arg.data <- eval(parse(text=paste(arg.names[arg],"$clim.in", sep="")))
+      if (!is.na(missval.threshold)){
       missing.percentage <- sum(is.na(arg.data)) / length(arg.data)
       if (missing.percentage > (missval.threshold/100)){
         warning(paste("Missing value warning: argument", arg.names[arg], "had", missing.percentage*100,
@@ -54,7 +53,20 @@ QCInputData <- function(train.predictor, train.target, esd.gen, k=0, ds.method="
       }
     }
     message("Passed mising value threshold check")
+    #Check for discontinuous time series that don't look like time masks
+    if(!allow.discontinuous.time.series){
+      test <- rle(as.vector(apply(convert.NAs(arg.data), c(1,2), sum)))$values
+      #      test <- rle(test)$values
+      if(sum(test==0,test==dim(arg.data)[3]) != length(test)){
+        stop(paste("Discontinuous time series Error: One of the time series present in",arg.names[arg], "obtained from", 
+                   arg.filename, "did not contain either all missing values or a whole timeseries of length", dim(arg.data)[3]))
+      }
+      message("passed discontinuous time series check")
+    }
   }
+  message("passed all internal consistency checks")
+
+  
   #Check for spatial dimension agreement
   if(dim(train.predictor$clim.in)[1:2]!=dim(train.target$clim.in)[1:2] || dim(train.predictor$clim.in)[1:2]!=dim(esd.gen$clim.in)[1:2]){
     stop(paste("Spatial dimension error: train.target had spatial dimensions of", dim(train.target)[1], dim(train.target)[2], 
@@ -76,4 +88,13 @@ QCInputData <- function(train.predictor, train.target, esd.gen, k=0, ds.method="
   #Insert date agreement check in here
   message("passed time series agreement check")         
   #At present, does not return anything - just throws warning messages
+}
+
+
+###Right now, I have this function in at least two places. I am not sure where to put it. 
+convert.NAs<-function(dataset){
+  dataset2<-dataset
+  dataset2[is.na(dataset)]<-0
+  dataset2[!is.na(dataset)]<-1
+  return(dataset2)
 }

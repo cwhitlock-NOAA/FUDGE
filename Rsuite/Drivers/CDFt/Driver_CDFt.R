@@ -228,7 +228,7 @@ for (predictor.var in predictor.vars){
 }
 
 # simulate the user-specified choice of climate variable name to be processed
-# TODO: Talk to Aparna about this, because it still needs work.
+# TODO: Talk to Aparna about this
 clim.var.in <- list.fut$clim.in
 # ----- Begin segment like FUDGE Schematic Section 3: Pre-processing of Input Data -----
 
@@ -236,6 +236,20 @@ clim.var.in <- list.fut$clim.in
 #TODO cew: Explore passing spat.mask.ncobj as second arg, 
 #making checks currently done internal to the function that relies on the path to outside. 
 #This way, we open the file just once. spat.mask.ncobj potentially to be used in final sections
+
+#- - - - - Loop through masked.data to downscale points ------------- #
+
+# ----- Begin segment like FUDGE Schematic Section 3: QC of Data After Pre-Processing -----#
+
+#Perform a check upon the time series, dimensions and method of the downscaling 
+#input and output to assure compliance
+message("Checking input data")
+
+QCInputData(train.predictor = list.hist, train.target = list.target, esd.gen = list.fut, 
+            k = k.fold, ds.method=ds.method, calendar=downscale.calendar)
+
+#Moving mask application after the intital QC checks because it simplified the QC
+#and cuts down on the number of errors/warnings that we want to do something about
 
 message("Applying spatial masks")
 # #spat.mask.path <- list.files(path=paste(spat.mask.dir_1),
@@ -251,16 +265,6 @@ list.hist$clim.in <- ApplySpatialMask(list.hist$clim.in, spat.mask$masks[[1]])
 print("ApplySpatialMask target: success..2")
 list.fut$clim.in <- ApplySpatialMask(list.fut$clim.in, spat.mask$masks[[1]])
 print("ApplySpatialMask target: success..3")
-#- - - - - Loop through masked.data to downscale points ------------- #
-
-# ----- Begin segment like FUDGE Schematic Section 3: QC of Data After Pre-Processing -----#
-
-#Perform a check upon the time series, dimensions and method of the downscaling 
-#input and output to assure compliance
-message("Checking input data")
-
-QCInputData(train.predictor = list.hist, train.target = list.target, esd.gen = list.fut, 
-            k = k.fold, ds.method=ds.method, calendar=downscale.calendar)
 
 # compute the statistics of the vector to be passed into the downscaling training
 

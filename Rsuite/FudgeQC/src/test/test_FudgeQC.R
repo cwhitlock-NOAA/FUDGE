@@ -37,13 +37,15 @@ test_QCInputData <- function(){
   train.predict.filename <- "/archive/esd/PROJECTS/DOWNSCALING/GCM_DATA/CMIP5/MPI-ESM-LR/historical/atmos/day/r1i1p1/v20111006/tasmax/SCCSC0p1/OneD/tasmax_day_MPI-ESM-LR_historical_r1i1p1_SCCSC0p1_19610101-20051231.I300_J31-170.nc"
   esd.gen.filename <- "/archive/esd/PROJECTS/DOWNSCALING/GCM_DATA/CMIP5/MPI-ESM-LR/historical/atmos/day/r1i1p1/v20111006/tasmax/SCCSC0p1/OneD/tasmax_day_MPI-ESM-LR_historical_r1i1p1_SCCSC0p1_19610101-20051231.I300_J31-170.nc"
   
-  print("Testing for all missing values in input data error")
-  good.data.filename <- "Rsuite/sampleNC/tasmax_day_GFDL-HIRAM-C360-COARSENED_amip_r1i1p1_19790101-20081231.I748_J454-567.nc"
-  all.missvals <- "/home/cew/Code/fudge2014/Rsuite/sampleNC/all_na_values.nc"
-  good <- ReadNC(nc_open(good.data.filename), "tasmax")
-  bad <- ReadNC(nc_open(all.missvals), "tasmax")
-  checkException(QCInputData(good, bad, good, k=0, calendar="julian"), 
-                 "Missing value error: train.target contained all NA values.")
+  
+  ###All missing values has been tweaked to throw a warning rather than an error.
+#   print("Testing for all missing values in input data error")
+#   good.data.filename <- "Rsuite/sampleNC/tasmax_day_GFDL-HIRAM-C360-COARSENED_amip_r1i1p1_19790101-20081231.I748_J454-567.nc"
+#   all.missvals <- "/home/cew/Code/fudge2014/Rsuite/sampleNC/all_na_values.nc"
+#   good <- ReadNC(nc_open(good.data.filename), "tasmax")
+#   bad <- ReadNC(nc_open(all.missvals), "tasmax")
+#   checkException(QCInputData(good, bad, good, k=0, calendar="julian"), 
+#                  "Missing value error: train.target contained all NA values.")
  
   ###Missing valyes currently throw a warning rather than an error, but the principle is the same.
 #   print("Testing for missing value threshold error")
