@@ -211,9 +211,9 @@ for (predictor.var in predictor.vars){
   ####Precipitation changes go here
   if(predictor.var=='pr'){
     #Options currently hard-coded
-    pr.mask.opt = 'us_trace'
-    lopt.drizzle = TRUE
-    lopt.conserve= TRUE
+    pr.mask.opt = 'zero'
+    lopt.drizzle = FALSE
+    lopt.conserve= FALSE
     print("Number of NAs in var:")
     print(sum(is.na(list.hist$clim.in)))
     print("Number of zeroes in var:")
@@ -257,12 +257,6 @@ clim.var.in <- list.fut$clim.in
 #This way, we open the file just once. spat.mask.ncobj potentially to be used in final sections
 
 message("Applying spatial masks")
-# #spat.mask.path <- list.files(path=paste(spat.mask.dir_1),
-# #                             pattern=paste("[.]","I",i.file,"_",file.j.range, sep=""), full.names=TRUE)
-# spat.mask.filename <- paste(spat.mask.var,".","I",i.file,"_",file.j.range,".nc",sep='')
-# print(paste("Spatial mask to be applied:", spat.mask.filename))
-# spat.mask.nc <- OpenNC(spat.mask.dir_1,spat.mask.filename)
-# spat.mask <- ReadMaskNC(spat.mask.nc)
 
 list.target$clim.in <- ApplySpatialMask(list.target$clim.in, spat.mask$masks[[1]])
 print("ApplySpatialMask target: success..1")
@@ -367,7 +361,7 @@ if(numzeroes > 0){
   esd.final[esd.final < 0] <- 0
   print(paste("Number of values in output < 0 after correction:", sum(esd.final[!is.na(esd.final)] < 0)))
 }
-pr.post.process <- TRUE
+pr.post.process <- FALSE
 
 if('pr'%in%target.var && pr.post.process){ #TODO: Change to predictand.vars at some point
   print(paste("Adjusting pr values to pr threshold"))
@@ -379,8 +373,6 @@ if('pr'%in%target.var && pr.post.process){ #TODO: Change to predictand.vars at s
 ###CEW edit: replaced ds.vector with esd.final
 esd.final[is.na(esd.final)] <- 1.0e+20
 
-#out.file <- paste(output.dir,"/","outtest", fut.filename,sep='')
-#out.file <- paste(output.dir,"/", fut.filename,sep='')
 out.file <- paste(output.dir,"/", out.filename,sep='')
 
 #Create structure containing bounds and other vars
