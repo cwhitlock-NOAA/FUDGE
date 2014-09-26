@@ -131,6 +131,10 @@ AdjustWetdays <- function(ref.data, ref.units='kg m-2 s-1',
       }
     }
   }
+  print(summary(ref.data))
+  print(summary(as.numeric(ref.wetdays)*ref.data))
+  print(summary(adjust.data))
+  print(summary(as.numeric(adjust.wetdays)*adjust.data))
   out.list <- list("ref" = list("data"=as.numeric(ref.wetdays)*ref.data, "pr_mask"=ref.wetdays), 
                    "adjust" = list("data" = as.numeric(adjust.wetdays)*adjust.data, "pr_mask" = adjust.wetdays))
   if(length(adjust.future) > 1) {#||!is.na(adjust.future)){

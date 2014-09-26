@@ -118,8 +118,14 @@ LoopByTimeWindow <- function(train.predictor, train.target, esd.gen, mask.struct
       }
       #If there is enough data available in the window to perform downscaling
       if (sum(!is.na(window.predict))!=0 && sum(!is.na(window.target))!=0 && sum(!is.na(window.gen))!=0){
+        print(sum(!is.na(window.predict)))
+        print(sum(!is.na(window.target)))
+        print(sum(!is.na(window.gen)))
         if(length(mask.struct) <= 3){
         #perform downscaling on the series and merge into new vector
+          print(summary(window.predict[!is.na(window.predict)]))
+          print(summary(window.target[!is.na(window.target)]))
+          print(window.gen[!is.na(window.gen)])
         downscale.vec[!is.na(window.gen)] <- CallDSMethod(ds.method = downscale.fxn,
                                                           train.predict = window.predict[!is.na(window.predict)], 
                                                           train.target = window.target[!is.na(window.target)], 

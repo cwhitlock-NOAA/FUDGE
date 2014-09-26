@@ -211,7 +211,7 @@ for (predictor.var in predictor.vars){
   ####Precipitation changes go here
   if(predictor.var=='pr'){
     #Options currently hard-coded
-    pr.mask.opt = 'zero'
+    pr.mask.opt = 'us_trace'
     lopt.drizzle = FALSE
     lopt.conserve= FALSE
     print("Number of NAs in var:")
@@ -244,6 +244,10 @@ for (predictor.var in predictor.vars){
       list.hist$pr_mask <-temp.out$adjust$pr_mask
     }
   }
+#   save.post.adjust.data=FALSE
+#   if (save.post.adjust.data){
+#     
+#   }
 }
 
 # simulate the user-specified choice of climate variable name to be processed
