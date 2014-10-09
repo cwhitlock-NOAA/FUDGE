@@ -55,9 +55,6 @@ def postProc():
      basedire = basedir	
      esdMethod = method
      varname = target 
-     #if vname is passed, we assume we PP the target variable 
-     if(vname == ""):
-	vname = varname
      grid = spat_mask+"../"+region+".nc"
      region = ds_region
      outrec = outdir.split('_')
@@ -76,12 +73,16 @@ def postProc():
      predModel = fut_model 	
      indir = outdir #Our mini op from dscaling is the input to PP  
      ## if vname  contains the word mask, then yes let's set the indir differently  ##
-     if "mask" in vname:
-	print "The variable you're trying to PP appears to be a mask variable"
-        print "debug..",indir
-        indir = indir+"../../../../"+vname+"/"+region+"/OneD/"+ver+"/" 
-        print "indir ",indir 
-  
+     if(vname is not None):
+    	 if "mask" in vname:
+		print "The variable you're trying to PP appears to be a mask variable"
+        	print "debug..",indir
+        	indir = indir+"../../../../"+vname+"/"+region+"/OneD/"+ver+"/" 
+        	print "indir ",indir 
+      #if vname is passed, we assume we PP the target variable
+     else: 
+        vname = varname 
+        print "default target variable chose to be post-processed. Override with a -v varname.", vname
      obsid = "'"+target_model+"."+target_scenario+"."+target_freq+"."+target_ver+"("+target_train_start_time+"-"+target_train_end_time+")"+"'"
      #"OBS_DATA.GRIDDED_OBS.livneh.historical.atmos.day.r0i0p0.v1p2(1961-2005)"
      if (cond == 1):
