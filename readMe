@@ -53,3 +53,17 @@ postProc -fi ../utils/xml/vanilla.seasonal2.tasmin.xml
 Sample final output directory structure: 
 
 /work/a1r/testing/tn//downscaled/NOAA-GFDL/MPI-ESM-LR/rcp85/day/atmos/day/r1i1p1/v20111014/RRtnp1-CDFt-A38sL01K00/tasmin/RR/v20140108/tasmin_day_RRtnp1-CDFt-A38sL01K00_rcp85_r1i1p1_RR_20060101-20991231.nc 
+
+7. If you have a variable (eg.mask) that needs to be post-processed, please pass that to postProc with a  -v.
+postProc -i utils/xml/vanilla.mask.xml -v tasmax_qcmask 
+
+Underlying assumptions:
+
+The filename starts with the -v[variablename]
+The netCDF variable contains the same variable name.
+If using DRS, the "variable" facet should reflect the mask variable name. 
+
+Expected output location
+
+ /work/a1r//downscaled/NOAA-GFDL/MPI-ESM-LR/rcp85/day/atmos/day/r1i1p1/v20111014/RRtxp1-CDFt-A38x-mL01K00/tasmax_qcmask/RR/v20140108/tasmax_qcmask_day_RRtxp1-CDFt-A38x-mL01K00_rcp85_r1i1p1_RR_20060101-20991231.nc 
+
