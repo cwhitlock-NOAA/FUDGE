@@ -45,6 +45,8 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
   #'
   #'TODO: Check on the missing values for the non-downscaled vars. 
   #'Are they CF-compliant? And if not, how do we deal with the int/double prec. issue?
+  #'TODO: Change default from 'double' to FLOAT! This is very important, and should be implemented as
+  #'soon as the B-series of experiments are actually run.
     
     FUDGEROOT = Sys.getenv(c("FUDGEROOT"))
     
@@ -58,7 +60,7 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
       print(tunit) 
       print('defining time variable')
       t1 <- ncdim_def("time",tunit,time1,unlim=TRUE)
-      print(summary(t1))
+      #print(summary(t1))
     }else{
       time1 <- time.index.start:time.index.end
       tunit <- paste('days since ',start.year,'-01-01 12:00:00',sep='')
@@ -132,9 +134,12 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
     }
     save('var.dat', file="/home/cew/Code/testing/ncvars.out")
     message("creating nc objects")
-    nc.obj <- nc_create(filename,var.dat, verbose=TRUE)
+    nc.obj <- nc_create(filename,var.dat)
     print("placing nc vars")
-    ncvar_put(nc.obj, var.dat[[var.name]], data.array)
+    print(var.name)
+    print(length(var.dat[[var.name]]))
+    print(length(data.array))
+    ncvar_put(nc.obj, varid=var.dat[[var.name]], vals=data.array)
     if(bounds){
       message("Adding variables associated with bounds")
       bnds.names <- names(bnds.list)

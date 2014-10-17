@@ -69,7 +69,7 @@ setGeneral.Bias.Correct <- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   #In hindsight, I am not even sure that this applies here. 
   # What are the arguments to the args() parameter that are accepted? 
-  names.of.args <<- c("ds.method", "qc.method", "compare.factor")
+  names.of.args <<- c("ds.method", "ds.args", "qc.method", "qc.args", "compare.factor")
 }
 
 setNothing <- function(){

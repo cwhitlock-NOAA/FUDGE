@@ -63,7 +63,7 @@
 LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, mask.struct, 
                              create.ds.out=TRUE, downscale.fxn=NULL, downscale.args = NULL, kfold=0, kfold.mask=NULL, 
                              graph=FALSE, masklines=FALSE, 
-                             qc.test='kdAdjust', create.qc.mask=FALSE, 
+                             qc.test='kdAdjust', create.qc.mask=FALSE, qc.args=NULL,
                              create.postproc=FALSE, postproc.method='none', postproc.args=NULL){
   #May be advisable to hold fewer masks in memory. Can move some of the looping code to compensate.
   #At the present time, it might make more sense to call the more complicted fxns from elsewhere.
@@ -107,6 +107,7 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
     window.gen <- ApplyTemporalMask(esd.gen, mask.struct[[3]]$masks[[window]])
     #If no cross-validation is being performed:
     for(kmask in 1:length(kfold.mask)){
+      #TODO: figure out how k-fold cross-validation is going to interact with a time-trimming mask
       if (kfold > 1){
         kfold.predict <- ApplyTemporalMask(window.predict, kfold.masks[[1]]$masks[[kmask]])
         kfold.target <- ApplyTemporalMask(window.target, kfold.masks[[2]]$masks[[kmask]])
@@ -158,13 +159,14 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
                                                                   mask=kfold.target[!is.na(kfold.target)], 
                                                                   mask.data=kfold.predict[!is.na(kfold.predict)],
                                                                   pp.method=postproc.method, args=postproc.args)
-            print(summary(postproc.out))
-            print(length(postproc.out))
-            print(length(!is.na(postproc.out)))
+#             print(summary(postproc.out))
+#             print(length(postproc.out))
+#             print(length(!is.na(postproc.out)))
           }
         }else{
           #If there is a 4th pruning mask (currently only supported by 1 scenario), apply that afterwards
           #TODO: Test this bit, the masks are going to be significantly more complicated
+          #TODO: Figure out how on earth this is going to interact with a time-trimming mask.
           time.trim.mask <- mask.struct[[4]]$masks[[window]]
           temp.out <- window.gen
           temp.out[!is.na(temp.out)] <- CallDSMethod(ds.method = downscale.fxn,

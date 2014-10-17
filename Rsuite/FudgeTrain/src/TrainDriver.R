@@ -1,5 +1,6 @@
-TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.list, ds.method=NULL, k=0, time.steps=NA, 
-                        istart = NA,loop.start = NA,loop.end = NA, downscale.args=NULL, 
+TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.list, k=0,  
+                        itime.steps=NA, start = NA,loop.start = NA,loop.end = NA, 
+                        create.ds.out = FALSE, downscale.args=NULL, ds.method=NULL,
                         create.qc.mask=FALSE, qc.test='kdAdjust', qc.args=NULL,
                         create.postproc.out=FALSE, postproc.method='totally.fake', postproc.args=NULL){
 #' Function to loop through spatially,temporally and call the Training guts.
@@ -22,7 +23,11 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
      
      # Initialize ds.vector 
    message("Entering downscaling driver function")
+   if(create.ds.out){
      ds.vector =  array(NA,dim=c(dim(fut.masked.in))) #c(istart,loop.end,time.steps)
+   }else{
+     ds.vector <- NULL
+   }
    if(create.qc.mask){
      qc.mask <-  array(NA,dim=c(dim(fut.masked.in)))
    }else{
@@ -58,20 +63,20 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
            loop.temp <- LoopByTimeWindow(train.predictor = hist.masked.in[i.index, j.index,], 
                                                                  train.target = target.masked.in[i.index, j.index,], 
                                                                  esd.gen = fut.masked.in[i.index, j.index,], 
-                                                                 mask.struct = mask.list, create.ds.out=!is.null(ds.method),
+                                                                 mask.struct = mask.list, create.ds.out=create.ds.out,
                                                                  downscale.fxn = ds.method, downscale.args = downscale.args, 
                                                                  kfold=k, kfold.mask=kfold.mask, graph=FALSE, masklines=FALSE, 
-                                         qc.test=qc.test, create.qc.mask=create.qc.mask, 
+                                         qc.test=qc.test, create.qc.mask=create.qc.mask, qc.args=qc.args,
                                          create.postproc=create.postproc.out, postproc.method=postproc.method, postproc.args=postproc.args)
-           if (!is.null(ds.method)){
+           if (create.ds.out){
            ds.vector[i.index, j.index,] <- loop.temp$downscaled
            }
            if(create.qc.mask){
              qc.mask[i.index, j.index, ] <- loop.temp$qc.mask
            }
            if(create.postproc.out){
-             print(length(loop.temp$postproc.out))
-             print(summary(loop.temp$postproc.out))
+#              print(length(loop.temp$postproc.out))
+#              print(summary(loop.temp$postproc.out))
              postproc.out[i.index, j.index, ] <- loop.temp$postproc.out
            }
          }else{

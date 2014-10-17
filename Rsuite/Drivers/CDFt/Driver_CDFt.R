@@ -104,6 +104,18 @@ LoadLib(ds.method)
 
 ###First, do simple QC checks, and set variables to be used later.
 
+##Test logic for distringuishing a qc run from a regular run
+if (grepl('qcmask', target.var)){
+  message('Correcting for QC mask case')
+  create.qc.mask <- TRUE
+  write.ds.out <- FALSE
+  qc.method <- args$qc.method
+  args$qc.method <- NULL
+  target.var <- sub('qcmask', "", target.var)
+}else{
+  write.ds.out <- TRUE
+}
+
 message("Setting downscaling method information")
 SetDSMethodInfo(ds.method)
 message("Checking downscaling arguments")
@@ -257,12 +269,6 @@ clim.var.in <- list.fut$clim.in
 #This way, we open the file just once. spat.mask.ncobj potentially to be used in final sections
 
 message("Applying spatial masks")
-# #spat.mask.path <- list.files(path=paste(spat.mask.dir_1),
-# #                             pattern=paste("[.]","I",i.file,"_",file.j.range, sep=""), full.names=TRUE)
-# spat.mask.filename <- paste(spat.mask.var,".","I",i.file,"_",file.j.range,".nc",sep='')
-# print(paste("Spatial mask to be applied:", spat.mask.filename))
-# spat.mask.nc <- OpenNC(spat.mask.dir_1,spat.mask.filename)
-# spat.mask <- ReadMaskNC(spat.mask.nc)
 
 list.target$clim.in <- ApplySpatialMask(list.target$clim.in, spat.mask$masks[[1]])
 print("ApplySpatialMask target: success..1")
@@ -326,19 +332,19 @@ start.time <- proc.time()
 #source("Rsuite/FudgeTrain/src/LoopByTimeWindow.R")
 #source("Rsuite/FudgeTrain/src/CallDSMethod.R")
 if (args!='na'){
-ds <- TrainDriver(target.masked.in = list.target$clim.in, 
-                          hist.masked.in = list.hist$clim.in, 
-                          fut.masked.in = list.fut$clim.in, 
-                          mask.list = tmask.list, ds.method = ds.method, k=0, time.steps=NA, 
-                          istart = NA,loop.start = NA,loop.end = NA, downscale.args=args, 
-                  create.qc.mask=create.qc.mask, qc.test=qc.method)
+  ds <- TrainDriver(target.masked.in = list.target$clim.in, 
+                    hist.masked.in = list.hist$clim.in, 
+                    fut.masked.in = list.fut$clim.in, 
+                    mask.list = tmask.list, k=0, 
+                    create.ds.out = TRUE, ds.method = ds.method,  downscale.args=args,  
+                    create.qc.mask=create.qc.mask, qc.test=qc.method, qc.args=NULL)
 }else{
   ds <- TrainDriver(target.masked.in = list.target$clim.in, 
-                           hist.masked.in = list.hist$clim.in, 
-                           fut.masked.in = list.fut$clim.in, 
-                           mask.list = tmask.list, ds.method = ds.method, k=0, time.steps=NA, 
-                           istart = NA,loop.start = NA,loop.end = NA, downscale.args=NULL, 
-                    create.qc.mask=create.qc.mask, qc.test=qc.method)
+                    hist.masked.in = list.hist$clim.in, 
+                    fut.masked.in = list.fut$clim.in, 
+                    mask.list = tmask.list, k=0, 
+                    create.ds.out = TRUE, ds.method = ds.method,  downscale.args=NULL,  
+                    create.qc.mask=create.qc.mask, qc.test=qc.method, qc.args=NULL)
 }
 print(summary(ds$esd.final))
 message("FUDGE training ends")
@@ -395,122 +401,111 @@ isBounds <- length(bounds.list.combined) > 1
 #                           units=list.fut$units$value,calendar= downscale.calendar,
 #                           lname=paste('Downscaled ',list.fut$long_name$value,sep=''),
 #                           cfname=list.fut$cfname$value)
-ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
-                          xlon,ylat,
-                          downscale.tseries=downscale.tseries, 
-                          downscale.origin=downscale.origin, calendar = downscale.calendar,
-                          #start.year=fut.train.start.year_1,
-                          units=list.fut$units$value,
-                          lname=paste('Downscaled ',list.fut$long_name$value,sep=''),
-                          cfname=list.fut$cfname$value, bounds=isBounds, bnds.list = bounds.list.combined
-                          )
-#Write Global attributes to downscaled netcdf
-label.training <- paste(hist.model_1,".",hist.scenario_1,".",hist.train.start.year_1,"-",hist.train.end.year_1,sep='')
-label.validation <- paste(fut.model_1,".",fut.scenario_1,".",fut.train.start.year_1,"-",fut.train.end.year_1,sep='')
-#Code for obtaining the filenames of all files from tmask.list
-# commandstr <- paste("attr(tmask.list[['", names(tmask.list), "']],'filename')", sep="")
-# time.mask.names <- ""
-# for (i in 1:length(names(tmask.list))){
-#   var <- names(tmask.list[i])
-#   time.mask.names <- paste(time.mask.names, paste(var, ":", eval(parse(text=commandstr[i])), ",", sep=""), collapse="")
-#   print(time.mask.names)
-# }
-#Code for obtaining the options for precipitation and post-processing
-#(current PP options are profoundly unlikely to be triggered for anything not pr)
-post.process.string = ""
-if(exists("pr.mask.opt")){
-  post.process.string <- paste(post.process.string, "trace pr threshold:", pr.mask.opt, 
-                               ", lopt.drizzle:", lopt.drizzle, ", lopt.conserve:", lopt.conserve, 
-                               ", trace post-processing:", pr.post.process, sep="")
-}
-WriteGlobals(ds.out.filename,k.fold,target.var,predictor.var,label.training,ds.method,
-             configURL,label.validation,institution='NOAA/GFDL',
-             version=as.character(parse(file=paste(FUDGEROOT, "version", sep=""))),title="CDFt tests in 1^5", 
-             ds.arguments=args, time.masks=tmask.list, ds.experiment=ds.experiment, 
-             post.process=post.process.string, time.trim.mask=(fut.time.trim.mask=='na'), 
-             tempdir=TMPDIR, include.git.branch=TRUE)
-
-#print(paste('Downscaled output file:',ds.out.filename,sep=''))
-message(paste('Downscaled output file:',ds.out.filename,sep=''))
+#if(write.ds.out){
+  ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
+                            xlon,ylat,
+                            downscale.tseries=downscale.tseries, 
+                            downscale.origin=downscale.origin, calendar = downscale.calendar,
+                            #start.year=fut.train.start.year_1,
+                            units=list.fut$units$value,
+                            lname=paste('Downscaled ',list.fut$long_name$value,sep=''),
+                            cfname=list.fut$cfname$value, bounds=isBounds, bnds.list = bounds.list.combined
+  )
+  #Write Global attributes to downscaled netcdf
+  label.training <- paste(hist.model_1,".",hist.scenario_1,".",hist.train.start.year_1,"-",hist.train.end.year_1,sep='')
+  label.validation <- paste(fut.model_1,".",fut.scenario_1,".",fut.train.start.year_1,"-",fut.train.end.year_1,sep='')
+  #Code for obtaining the filenames of all files from tmask.list
+  # commandstr <- paste("attr(tmask.list[['", names(tmask.list), "']],'filename')", sep="")
+  # time.mask.names <- ""
+  # for (i in 1:length(names(tmask.list))){
+  #   var <- names(tmask.list[i])
+  #   time.mask.names <- paste(time.mask.names, paste(var, ":", eval(parse(text=commandstr[i])), ",", sep=""), collapse="")
+  #   print(time.mask.names)
+  # }
+  #Code for obtaining the options for precipitation and post-processing
+  #(current PP options are profoundly unlikely to be triggered for anything not pr)
+  post.process.string = ""
+  if(exists("pr.mask.opt")){
+    post.process.string <- paste(post.process.string, "trace pr threshold:", pr.mask.opt, 
+                                 ", lopt.drizzle:", lopt.drizzle, ", lopt.conserve:", lopt.conserve, 
+                                 ", trace post-processing:", pr.post.process, sep="")
+  }
+  WriteGlobals(ds.out.filename,k.fold,target.var,predictor.var,label.training,ds.method,
+               configURL,label.validation,institution='NOAA/GFDL',
+               version=as.character(parse(file=paste(FUDGEROOT, "version", sep=""))),title="CDFt tests in 1^5", 
+               ds.arguments=args, time.masks=tmask.list, ds.experiment=ds.experiment, 
+               post.process=post.process.string, time.trim.mask=(fut.time.trim.mask=='na'), 
+               tempdir=TMPDIR, include.git.branch=TRUE)
+  
+  #print(paste('Downscaled output file:',ds.out.filename,sep=''))
+  message(paste('Downscaled output file:',ds.out.filename,sep=''))
+#}
 
 if(create.qc.mask==TRUE){
   for (var in predictor.vars){
-    #ds$qc.mask[ds$qc.mask==1.0e+20] <- NA
-    var <- 'tasmax'
-    ds$qcmask2 <- ds$qcmask
-    ds$qc.mask2[is.na(ds$qc.mask)] <- as.double(1.0e20)
-#    qc.outdir <- paste(output.dir, "/QCMask/", sep="")
-    #qc.output.dir <- 
-#     qc.file <- paste(output.dir, "/QCMask/", sub(var, paste(var, "qcmask", sep="_"), out.filename), sep="") #var, "-",
-#     paste(sub(pattern=".nc",replacement="", x=out.filename), 
-#     "-", qc.method, "-QCMask.nc", sep="")
+    ds$qc.mask[is.na(ds$qc.mask)] <- as.double(1.0e20)
     ###qc.method needs to get included in here SOMEWHERE.
     qc.var <- paste(var, 'qcmask', sep="_")
-    if(Sys.info()['nodename']$nodename=='cew'){
+    if(Sys.info()['nodename']!=""){ #'cew'
       #only activated for testing on CEW workstation
       qc.outdir <- paste(output.dir, "/QCMask/", sep="")
-      qc.file <- paste(qc.outdir, "/QCMask/", sub(var, qc.var, out.filename), sep="") #var, "-",
+      qc.file <- paste(qc.outdir, sub(pattern=var, replacement=qc.var, out.filename), sep="") #var, "-",
     }else{  
       #presumably running on PP/AN; dir creation taken care of
       qc.splitdir <- strsplit(output.dir, split="/")
       qc.splitdir <- qc.splitdir[[1]]
       qc.index <- length(qc.splitdir)-3
+      #assumes var_qcmask directory already created as part of the runscript process
       qc.outdir <- paste(c(qc.splitdir[1:qc.index], qc.var, qc.splitdir[(qc.index + 1):length(qc.splitdir)]),
                          collapse="/")
       qc.file <- paste(qc.outdir, sub(var, qc.var, out.filename), sep="")
     }
     message(paste('attempting to write to', qc.file))
-    qc.out.filename = WriteNC(qc.file,ds$qc.mask2,qc.var,
-                              xlon,ylat,prec='double',missval=1.0e20,
+    qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
+                              xlon,ylat,prec='float', #missval=1.0e20,
                               downscale.tseries=downscale.tseries, 
                               downscale.origin=downscale.origin, calendar = downscale.calendar,
                               #start.year=fut.train.start.year_1,
                               units='boolean',
                               lname=paste('QC Mask'),
-                              cfname=list.fut$cfname$value, bounds=isBounds, bnds.list = bounds.list.combined
+                              bounds=isBounds, bnds.list = bounds.list.combined
     )
     message(paste('QC Mask output file:',qc.out.filename,sep=''))
   }
 }
-#   qc.file <- paste(output.dir, "QCMasks", paste(sub(pattern=".nc",replacement="", x=out.filename), 
-#                                                 "-", qc.test, "-QCMask.nc", sep=""), 
-#                    sep="/")
-#   dirpop <- getwd()
-#   setwd(output.dir)
-#     qc.file <- paste("QCMasks", out.filename, sep="/")   
-#   #Copy without the variables from the original file
-#   qc.commandstring <- paste("ncks -x -v ", "'", predictor.vars, "' ", ds.out.filename, 
-#                                               " ", qc.file, sep="")
-#     message(qc.commandstring)
-#   system(qc.commandstring)
-#   qc.nc <- nc_open(qc.file, write=TRUE)
-#   qc.var <- ncvar_def("qc_mask", 
-#                        units='boolean', 
-#                        list(qc.nc$dim$lon, qc.nc$dim$lat, qc.nc$dim$time), 
-#                        prec='integer') #Got error when tried to specify 'short'
-#   qc.nc <- ncvar_add(qc.nc, qc.var, verbose=TRUE)
-#   print('qc mask added')
-#   ncvar_put(qc.nc, qc.var, ds$qc.mask, verbose=TRUE)
-#   nc_close(qc.nc)
-#   setwd(dirpop)
+create.postproc.out = FALSE
+if(create.postproc.out==TRUE){
+  for (var in predictor.vars){
+    
+    ds$postproc.out[is.na(ds$postproc.out)] <- as.double(1.0e20)
+    ###qc.method needs to get included in here SOMEWHERE.
+    postproc.var <- paste(var, 'postproc', sep="_")
+    if(Sys.info()['nodename']!=""){ #an011 'cew'
+      #only activated for testing on CEW workstation
+      postproc.outdir <- paste(output.dir, "/PostProc/", sep="")
+      postproc.file <- paste(postproc.outdir, sub(pattern=var, replacement=postproc.var, out.filename), sep="") #var, "-",
+    }else{  
+      #presumably running on PP/AN; dir creation taken care of
+      qc.splitdir <- strsplit(output.dir, split="/")
+      qc.splitdir <- qc.splitdir[[1]]
+      qc.index <- length(qc.splitdir)-3
+      #assumes var_qcmask directory already created as part of the runscript process
+      qc.outdir <- paste(c(qc.splitdir[1:qc.index], qc.var, qc.splitdir[(qc.index + 1):length(qc.splitdir)]),
+                         collapse="/")
+      qc.file <- paste(qc.outdir, sub(var, qc.var, out.filename), sep="")
+    }
+    message(paste('attempting to write to', postproc.file))
+    postproc.out.filename = WriteNC(postproc.file,ds$postproc.out,postproc.var,
+                                    xlon,ylat,prec='float', #missval=1.0e20,
+                                    downscale.tseries=downscale.tseries, 
+                                    downscale.origin=downscale.origin, calendar = downscale.calendar,
+                                    #start.year=fut.train.start.year_1,
+                                    units=list.fut$units$value,
+                                    lname=paste(var, 'Post-processed output'),
+                                    cfname=list.fut$cfname$value,bounds=isBounds, bnds.list = bounds.list.combined
+    )
+    message(paste('QC Mask output file:',qc.out.filename,sep=''))
+  }
+}
 
 print(paste("END TIME:",Sys.time(),sep=''))
-
-#options()[c('warn', 'error', 'showErrorCalls')]<-stored.opts
-
-## End Of Program
-
-# qc.nc <- nc_open(qc.file)
-# qc.out.mask <- ncvar_get(qc.nc, 'qc_mask')
-# print(summary(as.vector(qc.out.mask)))
-# 
-# print(summary(ds$qc.mask))
-# 
-# qc.out <- qc.out.mask[!is.na(qc.out.mask)]
-# print(sum(qc.out==0))
-# 
-# qc.in <- ds$qc.mask[!is.na(ds$qc.mask)]
-# print(sum(qc.in==0))
-# 
-# print(sum(qc.in==1))
-# print(sum(qc.out==1))

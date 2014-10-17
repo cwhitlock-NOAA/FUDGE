@@ -63,9 +63,13 @@ WriteGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
   if(time.trim.mask){
     info <- paste(info, "Time trimming mask used:", time.trim.mask, sep="")
   }
-  if(include.git.branch==TRUE){
-    branch.string <- system('git symbolic-ref HEAD')
-    commit.string <- system('git log | head -1')
+  if(include.git.branch){
+    out <- pipe('git symbolic-ref HEAD')
+    branch.string <- readLines(out)
+    close(out)
+    out <- pipe('git log | head -1')
+    commit.string <- readLines(out)
+    close(out)
     info <- paste(info, "Git branch:", branch.string, commit.string)
   }
   history <- paste('File processed at ',institution,'  using FUDGE (Framework For Unified Downscaling of GCMs Empirically) developed at GFDL, version: ', version ,' on ', date(), sep='')
