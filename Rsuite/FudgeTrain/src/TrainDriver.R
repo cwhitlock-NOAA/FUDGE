@@ -2,7 +2,8 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
                         itime.steps=NA, start = NA,loop.start = NA,loop.end = NA, 
                         create.ds.out = FALSE, downscale.args=NULL, ds.method=NULL,
                         create.qc.mask=FALSE, qc.test='kdAdjust', qc.args=NULL,
-                        create.postproc.out=FALSE, postproc.method='totally.fake', postproc.args=NULL){
+                        create.postproc.out=FALSE, postproc.method='totally.fake', postproc.args=NULL, 
+                        qc.mask.data=NULL){
 #' Function to loop through spatially,temporally and call the Training guts.
 #' @param target.masked.in, hist.masked.in, fut.masked.in: The historic target/predictor and 
 #' future predictor datasets to which spatial masks have been applied earlier
@@ -19,6 +20,9 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
 #' @param loop.end: J loop end index
 #' @param time.steps: the # time steps; defaults to NA
 #' @param istart: 
+#' @return A list of at least one element, esd.final. If creating a qc mask (create.qc.mask==TRUE), 
+#' a second element, named qc.mask, will be returned in the list as well. Adjusting the downscaled
+#' values does not create a third output at the moment; only the adjusted value is returned.
 
      
      # Initialize ds.vector 
@@ -28,16 +32,27 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
    }else{
      ds.vector <- NULL
    }
+   #Check for the QC mask function
    if(create.qc.mask){
-     qc.mask <-  array(NA,dim=c(dim(fut.masked.in)))
+     qc.mask <- array(NA, dim=c(dim(fut.masked.in)))
    }else{
-     qc.mask <- NULL
+     if(!is.null(qc.mask.data)){
+       #If pre-existing qc mask data is provided, it is already read in
+       qc.mask <- qc.mask.data
+     }else{
+       qc.mask <- NULL
+     } 
    }
-   if(create.postproc.out){
-     postproc.out <- array(NA,dim=c(dim(fut.masked.in)))
-   }else{
-     postproc.out <- NULL
-   }
+#    if(create.qc.mask){
+#      qc.mask <-  array(NA,dim=c(dim(fut.masked.in)))
+#    }else{
+#      qc.mask <- NULL
+#    }
+#    if(create.postproc.out){
+#      postproc.out <- array(NA,dim=c(dim(fut.masked.in)))
+#    }else{
+#      postproc.out <- NULL
+#    }
    print(k)
    if(k>1){
      #Create Kfold cross-validation mask
@@ -67,18 +82,19 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
                                                                  downscale.fxn = ds.method, downscale.args = downscale.args, 
                                                                  kfold=k, kfold.mask=kfold.mask, graph=FALSE, masklines=FALSE, 
                                          qc.test=qc.test, create.qc.mask=create.qc.mask, qc.args=qc.args,
-                                         create.postproc=create.postproc.out, postproc.method=postproc.method, postproc.args=postproc.args)
+                                         create.postproc=create.postproc.out, postproc.method=postproc.method, postproc.args=postproc.args, 
+                                         qc.mask.data=qc.mask[i.index, j.index, ])
            if (create.ds.out){
            ds.vector[i.index, j.index,] <- loop.temp$downscaled
            }
            if(create.qc.mask){
              qc.mask[i.index, j.index, ] <- loop.temp$qc.mask
            }
-           if(create.postproc.out){
-#              print(length(loop.temp$postproc.out))
-#              print(summary(loop.temp$postproc.out))
-             postproc.out[i.index, j.index, ] <- loop.temp$postproc.out
-           }
+#            if(create.postproc.out){
+# #              print(length(loop.temp$postproc.out))
+# #              print(summary(loop.temp$postproc.out))
+#              postproc.out[i.index, j.index, ] <- loop.temp$postproc.out
+#            }
          }else{
            #Nothing needs to be done because there is already a vector of NAs of the right dimensions inititalized.
            print(paste("Too many missing values in i =", i.index,",", "j =", j.index,"; skipping without downscaling"))
@@ -86,6 +102,6 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, mask.li
        }
      }
      ####### Loop(1) ends ###################################
-     return(list('esd.final' = ds.vector, 'qc.mask' = qc.mask, 'postproc.out'=postproc.out))
+     return(list('esd.final' = ds.vector, 'qc.mask' = qc.mask))  #, 'postproc.out'=postproc.out))
      ############## end of TrainDriver.R ############################
 }

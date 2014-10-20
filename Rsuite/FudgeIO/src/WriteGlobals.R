@@ -12,13 +12,21 @@ WriteGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
                          label.training=NA,downscaling.method=NA,reference=NA,label.validation=NA,
                          institution='NOAA/GFDL',version='undefined',title="undefined", 
                          ds.arguments='na', time.masks=NA, ds.experiment = 'unknown-experiment', 
-                         post.process="", time.trim.mask=FALSE, 
-                         tempdir="", include.git.branch=FALSE){
+                         post.process="", time.trim.mask='na', 
+                         tempdir="", include.git.branch=FALSE, 
+                         is.adjusted=FALSE, adjust.method=NA, 
+                         is.qcmask=FALSE, qc.method=NA){
 #a1r: removing count.dep.samples=NA,count.indep.samples=NA from function params
   #'Adds global attributes to existing netCDF dataset 
   comment.info <- ""
   if(!is.na(downscaling.method)){ 
   comment.info <- paste('Output produced from ',downscaling.method,' downscaling ',sep='')
+  }
+  #Note: only ONE of is.adjusted or is.qcmask should be activated at once. See the driver script for fxn calls.
+  if(is.adjusted){
+    comment.info <- paste(comment.info, "adjusted with the", adjust.method, "method", ", and")
+  }else if (is.qcmask){
+    comment.info <- paste(comment.info, "passed without adjustment through the QC masking check", qc.method, "and")
   }
   if(!is.na(kfold)){
   comment.info <- paste(comment.info, '(based on ',kfold,'-fold',' cross-validation), ',sep='') 
@@ -27,7 +35,11 @@ WriteGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
     comment.info <- paste(comment.info, 'with experiment configuration', ds.experiment, ").")
   }
   if(!is.na(predictand)){
-  comment.info <- paste(comment.info, 'This is a downscaled estimate of ',predictand,sep='')
+    if(!is.qcmask){
+      comment.info <- paste(comment.info, 'This is a downscaled estimate of ',predictand,sep='')
+    }else{
+      comment.info <- paste(comment.info, 'This is a QC check for a downscaled estimate of ',predictand,sep='')
+    }
   }
   if(!is.na(label.validation)){
   comment.info <- paste(comment.info,' for the ', label.validation,' experiment',sep='')
@@ -60,7 +72,7 @@ WriteGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
   if(post.process!=""){
     info <- paste(info, "Processing options: ", post.process, ";", sep="")
   }
-  if(time.trim.mask){
+  if(time.trim.mask!='na'){
     info <- paste(info, "Time trimming mask used:", time.trim.mask, sep="")
   }
   if(include.git.branch){
@@ -82,9 +94,9 @@ WriteGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
   }
   ncatt_put(nc.object, 0 , "title", title )
   ncatt_put(nc.object, 0 , "history", history )
-  print("debug1")
+  #print("debug1")
   ncatt_put(nc.object, 0 , "institution", institution )
-  print("debug2")
+  #print("debug2")
   if(comment.info != ""){
   ncatt_put(nc.object, 0 , "comment", comment.info )
   }

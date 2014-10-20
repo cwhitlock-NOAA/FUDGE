@@ -391,6 +391,19 @@ ds$esd.final[is.na(ds$esd.final)] <- 1.0e+20
 #out.file <- paste(output.dir,"/", fut.filename,sep='')
 out.file <- paste(output.dir,"/", out.filename,sep='')
 
+####Start implementing checks for output dirs and /tmpdirs
+exists <- file.create(out.file)
+if(!exists){
+  print("creating output direcotries")
+  system(paste("mkdir -p ", output.dir, sep=""))
+  system(paste("mkdir -p ", "/", sub(TMPDIR, "", output.dir), sep=""))
+#   if(create.qc.mask==TRUE){
+#     system(paste("mkdir -p"))
+#     system(paste("mkdir -p"))
+#   }
+}
+
+
 #Create structure containing bounds and other vars
 bounds.list.combined <- c(spat.mask$vars, tmask.list[[length(tmask.list)]]$vars)
 isBounds <- length(bounds.list.combined) > 1
@@ -446,7 +459,7 @@ if(create.qc.mask==TRUE){
     ds$qc.mask[is.na(ds$qc.mask)] <- as.double(1.0e20)
     ###qc.method needs to get included in here SOMEWHERE.
     qc.var <- paste(var, 'qcmask', sep="_")
-    if(Sys.info()['nodename']!=""){ #'cew'
+    if(Sys.info()['nodename']=="cew"){ #'cew'
       #only activated for testing on CEW workstation
       qc.outdir <- paste(output.dir, "/QCMask/", sep="")
       qc.file <- paste(qc.outdir, sub(pattern=var, replacement=qc.var, out.filename), sep="") #var, "-",
@@ -454,11 +467,22 @@ if(create.qc.mask==TRUE){
       #presumably running on PP/AN; dir creation taken care of
       qc.splitdir <- strsplit(output.dir, split="/")
       qc.splitdir <- qc.splitdir[[1]]
-      qc.index <- length(qc.splitdir)-3
+      qc.index <- length(qc.splitdir)-4
       #assumes var_qcmask directory already created as part of the runscript process
       qc.outdir <- paste(c(qc.splitdir[1:qc.index], qc.var, qc.splitdir[(qc.index + 1):length(qc.splitdir)]),
                          collapse="/")
-      qc.file <- paste(qc.outdir, sub(var, qc.var, out.filename), sep="")
+      qc.file <- paste(qc.outdir, "/", sub(var, qc.var, out.filename), sep="")
+    }
+    ###Check to make sure that it is possible to create the qc file; create dirs if not
+    message("Attempting creation of QC file")
+    message(qc.file)
+    exists <- file.create(qc.file)
+    if(!exists){
+      message("creating QC directories")
+      message(dirname(qc.file))
+      system(paste("mkdir -p ", dirname(qc.file), sep=""))
+      message(sub(TMPDIR, "", dirname(qc.file)))
+      system(paste("mkdir -p ", "/", sub(TMPDIR, "", dirname(qc.file)), sep=""))
     }
     message(paste('attempting to write to', qc.file))
     qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
@@ -470,42 +494,54 @@ if(create.qc.mask==TRUE){
                               lname=paste('QC Mask'),
                               bounds=isBounds, bnds.list = bounds.list.combined
     )
+    WriteGlobals(qc.out.filename,k.fold,target.var,predictor.var,label.training,ds.method,
+                 configURL,label.validation,institution='NOAA/GFDL',
+                 version=as.character(parse(file=paste(FUDGEROOT, "version", sep=""))),title="CDFt tests in 1^5", 
+                 ds.arguments=args, time.masks=tmask.list, ds.experiment=ds.experiment, 
+                 post.process=post.process.string, time.trim.mask=(fut.time.trim.mask=='na'), 
+                 tempdir=TMPDIR, include.git.branch=TRUE, 
+                 )
     message(paste('QC Mask output file:',qc.out.filename,sep=''))
+    message("Attempting system GCP operation for the QC output file:")
+    commandstr <- paste("gcp ", qc.out.filename, " /", sub(TMPDIR, "", qc.out.filename), sep="")
+    message(commandstr)
+    system(commandstr)
   }
 }
-create.postproc.out = FALSE
-if(create.postproc.out==TRUE){
-  for (var in predictor.vars){
-    
-    ds$postproc.out[is.na(ds$postproc.out)] <- as.double(1.0e20)
-    ###qc.method needs to get included in here SOMEWHERE.
-    postproc.var <- paste(var, 'postproc', sep="_")
-    if(Sys.info()['nodename']!=""){ #an011 'cew'
-      #only activated for testing on CEW workstation
-      postproc.outdir <- paste(output.dir, "/PostProc/", sep="")
-      postproc.file <- paste(postproc.outdir, sub(pattern=var, replacement=postproc.var, out.filename), sep="") #var, "-",
-    }else{  
-      #presumably running on PP/AN; dir creation taken care of
-      qc.splitdir <- strsplit(output.dir, split="/")
-      qc.splitdir <- qc.splitdir[[1]]
-      qc.index <- length(qc.splitdir)-3
-      #assumes var_qcmask directory already created as part of the runscript process
-      qc.outdir <- paste(c(qc.splitdir[1:qc.index], qc.var, qc.splitdir[(qc.index + 1):length(qc.splitdir)]),
-                         collapse="/")
-      qc.file <- paste(qc.outdir, sub(var, qc.var, out.filename), sep="")
-    }
-    message(paste('attempting to write to', postproc.file))
-    postproc.out.filename = WriteNC(postproc.file,ds$postproc.out,postproc.var,
-                                    xlon,ylat,prec='float', #missval=1.0e20,
-                                    downscale.tseries=downscale.tseries, 
-                                    downscale.origin=downscale.origin, calendar = downscale.calendar,
-                                    #start.year=fut.train.start.year_1,
-                                    units=list.fut$units$value,
-                                    lname=paste(var, 'Post-processed output'),
-                                    cfname=list.fut$cfname$value,bounds=isBounds, bnds.list = bounds.list.combined
-    )
-    message(paste('QC Mask output file:',qc.out.filename,sep=''))
-  }
-}
+####From now, on, post-processed/adjusted output is written as the downscaled output
+# create.postproc.out = FALSE
+# if(create.postproc.out==TRUE){
+#   for (var in predictor.vars){
+#     
+#     ds$postproc.out[is.na(ds$postproc.out)] <- as.double(1.0e20)
+#     ###qc.method needs to get included in here SOMEWHERE.
+#     postproc.var <- paste(var, 'postproc', sep="_")
+#     if(Sys.info()['nodename']!=""){ #an011 'cew'
+#       #only activated for testing on CEW workstation
+#       postproc.outdir <- paste(output.dir, "/PostProc/", sep="")
+#       postproc.file <- paste(postproc.outdir, sub(pattern=var, replacement=postproc.var, out.filename), sep="") #var, "-",
+#     }else{  
+#       #presumably running on PP/AN; dir creation taken care of
+#       qc.splitdir <- strsplit(output.dir, split="/")
+#       qc.splitdir <- qc.splitdir[[1]]
+#       qc.index <- length(qc.splitdir)-3
+#       #assumes var_qcmask directory already created as part of the runscript process
+#       qc.outdir <- paste(c(qc.splitdir[1:qc.index], qc.var, qc.splitdir[(qc.index + 1):length(qc.splitdir)]),
+#                          collapse="/")
+#       qc.file <- paste(qc.outdir, sub(var, qc.var, out.filename), sep="")
+#     }
+#     message(paste('attempting to write to', postproc.file))
+#     postproc.out.filename = WriteNC(postproc.file,ds$postproc.out,postproc.var,
+#                                     xlon,ylat,prec='float', #missval=1.0e20,
+#                                     downscale.tseries=downscale.tseries, 
+#                                     downscale.origin=downscale.origin, calendar = downscale.calendar,
+#                                     #start.year=fut.train.start.year_1,
+#                                     units=list.fut$units$value,
+#                                     lname=paste(var, 'Post-processed output'),
+#                                     cfname=list.fut$cfname$value,bounds=isBounds, bnds.list = bounds.list.combined
+#     )
+#     message(paste('QC Mask output file:',qc.out.filename,sep=''))
+#   }
+# }
 
 print(paste("END TIME:",Sys.time(),sep=''))

@@ -27,7 +27,7 @@ QCDSValues<-function(qc.test, data, hist.pred=NULL, hist.targ=NULL, fut.pred=NUL
   switch(qc.test, 
          'sdev' = return(callSdev(data, qc.data)),
          'sdev2' = return(callSdev2(data, qc.data)),
-         'kdAdjust' = return(callKDAdjust(data, hist.pred, hist.targ, fut.pred)),
+         'kdCompare' = return(callKDCompare(data, hist.pred, hist.targ, fut.pred)),
          stop(paste('QC Method Error: method', qc.test, 
                     "is not supported for CreateQCMask. Please check your input."))
   )
@@ -53,8 +53,10 @@ callSdev2 <- function(data, qc.data){
   return( sum(stdev.vec) >= (length(data)/2) )
 }
 
-callKDAdjust <- function(data, hist.pred, hist.targ, fut.pred, var='tasmax', 
+callKDCompare <- function(data, hist.pred, hist.targ, fut.pred, var='tasmax', 
                             time.window=NULL, time.data.window=NULL){
+  #TODO: Add a unit conversion in here. It's a bit messy (and hard-coded)
+  #at the moment.
   #Set corrective error factor: 
   if(var=='pr'){
     correct.factor <- 6e-04

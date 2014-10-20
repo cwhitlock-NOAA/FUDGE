@@ -24,9 +24,10 @@
 #'Currently, the code assumes that all maskfiles will have the same number of masks within them
 #'to apply; this assumption needs to be talked about at some point.
 #'
-#'@return A single timeseries containing all downscaled data.
+#'@return A list containing all downscaled data. If a qc mask is being created, will return a second
+#'element in the list, qc.mask. 
 #'####
-#' @examples
+#' @example
 #' sample_t_predict <- seq(1:365)
 #' sample_t_target <- sin(sample_t_predict*0.05)
 #' sample_esd_gen <- seq(1:365)
@@ -64,7 +65,8 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
                              create.ds.out=TRUE, downscale.fxn=NULL, downscale.args = NULL, kfold=0, kfold.mask=NULL, 
                              graph=FALSE, masklines=FALSE, 
                              qc.test='kdAdjust', create.qc.mask=FALSE, qc.args=NULL,
-                             create.postproc=FALSE, postproc.method='none', postproc.args=NULL){
+                             create.postproc=FALSE, postproc.method='none', postproc.args=NULL, 
+                             qc.mask.data=NULL){
   #May be advisable to hold fewer masks in memory. Can move some of the looping code to compensate.
   #At the present time, it might make more sense to call the more complicted fxns from elsewhere.
   #source("../../FudgePreDS/ApplyTemporalMask.R")
@@ -80,13 +82,18 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
   if(create.qc.mask){
     qc.mask <- rep(NA, downscale.length)
   }else{
-    qc.mask <- NULL
+    if(!is.null(qc.mask.data)){
+      #If pre-existing qc mask data is provided, it is already read in
+      qc.mask <- qc.mask.data
+    }else{
+      qc.mask <- NULL
+    } 
   }
-  if(create.postproc){
-    postproc.out <- rep(NA, downscale.length)
-  }else{
-    postproc.out <- NULL
-  }
+#   if(create.postproc){
+#     postproc.out <- rep(NA, downscale.length)
+#   }else{
+#     postproc.out <- NULL
+#   }
   ##Create checkvector to test collision of kfold validation masks
   checkvector <- rep(0, downscale.length)
   #And finally, in order to see internal activity, add the graph options
@@ -113,7 +120,7 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
         kfold.target <- ApplyTemporalMask(window.target, kfold.masks[[2]]$masks[[kmask]])
         kfold.gen <- ApplyTemporalMask(window.gen, kfold.masks[[3]]$masks[[kmask]])
       }else{
-        #TODO: Ask someone about how looping over a sinle element slows the code (OR DOES IT?)
+        #TODO: Ask someone about how looping over a single element slows the code (OR DOES IT?)
         kfold.predict <- window.predict
         kfold.target <- window.target
         kfold.gen <- window.gen
@@ -155,10 +162,14 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
                                                      fut.pred = kfold.gen[!is.na(kfold.gen)])
           }
           if(create.postproc){
-            postproc.out[!is.na(kfold.gen)] <- CallPostProcMethod(data=kfold.gen[!is.na(kfold.gen)], 
-                                                                  mask=kfold.target[!is.na(kfold.target)], 
-                                                                  mask.data=kfold.predict[!is.na(kfold.predict)],
-                                                                  pp.method=postproc.method, args=postproc.args)
+            #Creating an adjusted output overwrites the value of the 
+            downscale.out[!is.na(kfold.gen)] <- CallDSAdjustMethod(adjust.method=postproc.method, 
+                                                                   args=postproc.args, data=downscale.out[!is.na(kfold.gen)], 
+                                                                   mask=qc.mask[!is.na(kfold.gen)], #WILL THROW ERRORS IF BOTH FALSE 
+                                                                   hist.pred = kfold.predict[!is.na(kfold.predict)], 
+                                                                   hist.targ = kfold.target[!is.na(kfold.target)], 
+                                                                   fut.pred = kfold.gen[!is.na(kfold.gen)]
+                                                                   )
 #             print(summary(postproc.out))
 #             print(length(postproc.out))
 #             print(length(!is.na(postproc.out)))
@@ -202,7 +213,7 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
 #     #Remember to duplicate most of the structure from above; you're just adding a few new checks
 #   }
   #Exit loop
-  return(list('downscaled'=downscale.vec, 'qc.mask'=qc.mask, 'postproc.out'=postproc.out))
+  return(list('downscaled'=downscale.vec, 'qc.mask'=qc.mask)) #'postproc.out'=postproc.out))
 }
 
 #Converts NAs to 0, and all non-NA values to 1
