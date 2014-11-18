@@ -20,6 +20,7 @@ rootdir = "/archive/esd/PROJECTS/DOWNSCALING/"  #default
 projectRoot = "/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th" 
 project = "35" #default TODO get from XML
 ppn = 2 #TODO get from XML custom?
+overwrite = False #default don't overwrite existing output or scripts
 def checkTags(dictParams,key):
 	        if(dictParams.has_key(key)):
                	 	val = dictParams[key]
@@ -120,7 +121,7 @@ def getDir(listDir,label):
                 i = i + 1
                 dire = dictDIR[dir_lo].strip()
 	return dire	
-def listVars(uinput,basedir=None,force=False,pp=False):
+def listVars(uinput,basedir=None,msub=False,pp=False):
 	print "PP option is set to ",pp
         if os.path.exists(uinput):
 		handler = xmlhandler.XMLHandler(  )
@@ -132,7 +133,7 @@ def listVars(uinput,basedir=None,force=False,pp=False):
 			dversion='v20140108'
         print "----Downscaling XML template-", uinput
         print "----Downscaled data version-", dversion
-        print "----Force Override existing output Flag-", force
+      #  print "----Force Override existing output Flag-", force
         ###################################
         print "Input from XML"
         print "########################"
@@ -219,6 +220,17 @@ def listVars(uinput,basedir=None,force=False,pp=False):
         qc_params = checkTags(dictParams,'qcparams') 
 	#new way of getting masklist
 	masklists = checkTags(dictParams,'masklists')
+	preexist = checkTags(dictParams,'preexist')
+	#TODO add preexist as another return variable
+	print "preexist"+preexist
+	if(preexist == 'exit'):
+		force = False
+        elif(preexist == 'erase'):
+		force = True
+	else:
+	        print "\033[1;41mERROR code -2: Please provide a valid value {'exit','erase'} for ifpreexist tag in XML \033[1;m",preexist
+		sys.exit(-2)
+        #print "----Force Override existing output Flag-", force
         ####### end get  dictParams ###########################
         ## OneD or ZeroD that's the question ##  
         if(region != "station"):
@@ -284,14 +296,19 @@ def listVars(uinput,basedir=None,force=False,pp=False):
 	    print "Output directory is :",outdir
 #new
 	    if (pp == False):	
-                    	for lon in (lons,lone):
-	                	exists = checkExisting(outdir,lon,dsuffix,target,freq,dmodel,dexper,ens,fut_train_start_time,fut_train_end_time,'mini')
-			 	#print "Exists? ",exists
+                    	for lon in range(int(lons),int(lone)):
+	                	exists = checkExisting(outdir,lon,dsuffix,predictand,freq,dmodel,experiment,dexper,ens,fut_train_start_time,fut_train_end_time,'mini',ds_region)
                          	if (exists == True) & (force == False):
-                                	sys.exit("ERROR: Output already exists. Use -f to override existing output. Quitting now..")
+                                	print "\033[1;41mERROR code -7: Output already exists. Use <ifpreexist>erase</ifpreexist>  to override existing output. Quitting now..\033[1;m",'\n',outdir
+					sys.exit(-7)
                          	if (exists == True) & (force == True):
-                                	print "CAUTION Output already exists. -f is turned on. Any existing output will be overwritten."
-
+					print '\033[1;41mCAUTION Output already exists. -f is turned on. Any existing output will be overwritten.\033[1;m'
+                               # 	print "CAUTION Output already exists. -f is turned on. Any existing output will be overwritten."
+					global overwrite
+					overwrite = True	
+					break	
+	    if(force == True):
+		overwrite = True
 #	    return targetdir1,hist_pred_dir1,fut_pred_dir1
 	    target_scenario = dict_target['exp']+"_"+dict_target['rip']
 	    target_model = dict_target['model']
@@ -309,7 +326,7 @@ def listVars(uinput,basedir=None,force=False,pp=False):
 ############end of listVars###################### 
 def main():
     #################### args parsing ############
-        help = "#################Usage:##################\n dsTemplater -i <input XML> \n "
+        help = "#################Usage:(run from AN nodes)##################\n dsTemplater -i <input XML> \n "
         help = help + "Example 1: expergen -i dstemplate.xml \n "
         help = help + "Example 2: expergen -i examples/dstemplate.60lo0FUTURE.xml \n"
         #print usage
@@ -325,13 +342,27 @@ def main():
         parser = OptionParser(usage=help)
         parser.add_option("-i", "--file", dest="uinput",
         help="pass location of XML template", metavar="FILE")
-        parser.add_option("-f", "--force",action="store_true",default=False, help="Force override existing output. Default is set to FALSE")
+      #since we now have an XML tag  parser.add_option("-f", "--force",action="store_true",default=False, help="Force override existing output. Default is set to FALSE")
+        parser.add_option("--msub", "--msub",action="store_true",default=False, help="Automatically submit the master runscripts using msub.Default is set to FALSE")
         #parser.add_option("-v", "--version",action="store_true", dest="version",default="v20120422", help="Assign version for downscaled data. Default is set to v20120422")        
         
         (options, args) = parser.parse_args()
-        verOpt = True #default 
+        verOpt = True #default
+	msub = False 
         forOpt = True #default
         inter = 'on' #for debugging
+#########if platform is not PAN, disable expergen at this time 11/14/2014 ###############
+        system,node,release,version,machine = os.uname()
+        if(node.startswith('pp')):
+                print "Running on PP(PAN) node", node
+        if(node.startswith('an')):
+                print "Running on AN(PAN) node", node
+        else:
+                 print "\033[1;41mERROR code -5: Running on a workstation not tested for end-to-end runs yet. Please login to analysis nodes to run expergen. \033[1;m",node
+		 sys.exit(-5)
+
+   
+######################################################################################### 
         if (inter == 'off'):
 		uinput = 'dstemplate.xml'
 	        dversion = "v20120422"
@@ -355,23 +386,47 @@ def main():
                 		else:
                     			print "Please pass a valid input XML filename with the -i argument and try again. See -h for syntax. Quitting now.."
                     			sys.exit()
-            		if(opts == 'force'):
+            		if(opts == 'msub'):
                 		if (vals == True):
-                    			forOpt = False
-                		force = vals 
+                    			msub = True 
+				else:
+					msub = False
+                		msub = vals 
         #########  call listVars() #############################################################
-	output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,expconfig,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists= listVars(uinput,basedir,force)
+	output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,expconfig,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists= listVars(uinput,basedir,msub)
         ######### call script creators..  #######################################################
         ############################### 1 ###############################################################
         #  make.code.tmax.sh 1 748 756 /vftmp/Aparna.Radhakrishnan/pid15769 outdir 1979 2008 tasmax
 
 	# If the runscript directory already exists, please quit
 	#/home/a1r/gitlab/cew/fudge2014///scripts/tasmax/35txa-CDFt-A00X01K02
-	scriptdir = basedir+"/scripts/"+target+"/"+expconfig
-
-	if(os.path.exists(scriptdir)):
-		print "Warning: script directory already exists.",scriptdir
-		#print "ERROR: Directory already exists. Clean up and try again please:",scriptdir 
+	scriptdir = [sbase+"/master",sbase+"/runcode",sbase+"/runscript"]
+        for sd in scriptdir:
+	    if(os.path.exists(sd)):
+       		 if os.listdir(sd):
+		    if (overwrite == False):    
+			print '\033[1;41mERROR: Scripts Directory already exists. Clean up using cleanup_script and try again please -or- (Use <ifpreexist>erase</ifpreexist> if output/scripts already exist and you want to override this and let expergen run the cleanup_script for yyou)\033[1;m',sd
+                        print "\033[1;41mERROR code -6: script directory already exists.Check --\033[1;m",scriptdir
+                	sys.exit(-6)
+		    if (overwrite == True):
+			print "\033[1;43mWarning: Scripts Directory already exists. But, since <ifpreexist>erase</ifpreexist> is turned on, the scripts and any existing OneD output will be overwritten.\033[1;m "
+			print "Now invoking cleanup utility..........."
+		        cleaner_script = basedir+"/utils/bin/"+"cleanup_script.csh"
+		        cleaner_cmd = cleaner_script+" d "+uinput 
+	                print "cleaner_cmd"		
+	                pclean = subprocess.Popen(cleaner_cmd,shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
+			#check return code
+        		output0, errors0 = pclean.communicate()
+        		if(pclean.returncode != 0):
+         			print "033[1;41mCleaner Step:!!!! FAILED !!!!, please contact developer.033[1;m"
+         			print output0, errors0
+        			sys.exit(1)
+			else:
+				print output0,errors0
+			print "continue expergen run...................." 
+			break 
+	    else:
+		   print "scriptdir "+sd+" does not exist. Looks like a clean slate "
         script1Loc = basedir+"/utils/bin/create_runcode"
         make_code_cmd = script1Loc+" "+str(predictor)+" "+str(target)+" "+str(output_grid)+" "+str(spat_mask)+" "+str(region)
         make_code_cmd = make_code_cmd+" "+str(file_j_range)+" "+str(lons)+" "+str(lats)+" "+str(late)
@@ -400,6 +455,7 @@ def main():
         #cprint output,errors
         ###############################################################################################
         print "1- completed\n"
+        #print "debug............msub turned ",msub
         ############################### 2 ################################################################
 	#target_time_window,hist_time_window,fut_time_window
         script2Loc = basedir+"/utils/bin/"+"create_runscript"
@@ -419,11 +475,11 @@ def main():
         
         ###################################### 3 ################################################################
         script3Loc = basedir+"/utils/bin/"+"create_master_runscript"
-        create_master_cmd= script3Loc+" "+str(lons)+" "+str(lone)+" "+str(predictor)+" "+method+" "+sbase+" "+expconfig+" "+file_j_range+" "+tstamp+" "+str(ppn)
+        create_master_cmd= script3Loc+" "+str(lons)+" "+str(lone)+" "+str(predictor)+" "+method+" "+sbase+" "+expconfig+" "+file_j_range+" "+tstamp+" "+str(ppn)+" "+str(msub)
         print "Step 3: --------------MASTER SCRIPT GENERATION-----------------------"#+create_master_cmd
         p2 = subprocess.Popen('tcsh -c "'+create_master_cmd+'"',shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
-        #cprint create_master_cmd
-        #print "Create master script .. in progress"
+        print create_master_cmd
+        print "Create master script .. in progress"
         output2, errors2 = p2.communicate()
         #######
         if(p2.returncode != 0):
@@ -456,17 +512,23 @@ def getOutputPath(projectRoot,category,instit,predModel,dexper,freq,realm,mip,en
     stdoutdir = projectRoot+"/"+category+"/"+instit+"/"+predModel+"/"+dexperonly+"/"+freq+"/"+realm+"/"+mip+"/"+ens+"/"+pversion+"/"+dmodel+"/"+predictand+"/"+ds_region+"/"+dim+"/"+dversion+"/"  
     return stdoutdir  
 
-def checkExisting(dire,lon,Jsuffix,variable,freq,method,scenario,ens,start_year_s1,end_year_s1,fileid):
-	## to check if the given directory structure and ffilenams already exist in the file system.  Even if there is a single output file that already exists, the program quits. Use -f to force overwriting.
+#def checkExisting(dire,lon,Jsuffix,variable,freq,method,scenario,ens,start_year_s1,end_year_s1,fileid):
+def checkExisting(dire,lon,Jsuffix,variable,freq,model,exper,scenario,ens,start_year_s1,end_year_s1,fileid,region):
+
+	## to check if the given directory structure and ffilenams already exist in the file system.  Even if there is a single output file that already exists, the program quits. Use ifpreexist erase to force overwriting.-tasmin_day_RRtnp1-CDFt-B38atL01K00_rcp85_r1i1p1_r1i1p1_RR_20060101-20991231.I369_"J31-170".nc
+
 	#filename  out.file1_a <- paste(variable,'_',freq,'_',method,'_',scenario1,'_',ens,'_',start_year_s1,'-',end_year_s1,fileid,sep='')
+#checkExisting(outdir,lon,dsuffix,target,freq,dmodel,dexper,ens,fut_train_start_time,fut_train_end_time,'mini')
+
 	exists = False 
         if(os.path.exists(dire)):
-		print "---------Output directory",dire,"already exists"
+		#print "Warning Warning---------Output directory",dire,"already exists"
 		filesuff = ".nc"
+	        Jsuffix = Jsuffix.replace('"', '').strip()
 	        fileid= ".I"+str(lon)+"_"+str(Jsuffix)+filesuff
-                filename = variable+"_"+freq+"_"+method+"_"+scenario+"_"+str(ens)+"_"+str(start_year_s1)+"0101-"+str(end_year_s1)+"1231"+fileid
+                filename = variable+"_"+"day"+"_"+exper+"_"+str(scenario)+"_"+str(region)+"_"+str(start_year_s1)+"0101-"+str(end_year_s1)+"1231"+fileid
 		if(os.path.exists(dire+"/"+filename)):
-			print "OOPS!!!!!!!!!Output file already exists:",dire,"/",filename
+		#	print "OOPS!!!!!!!!!Output file already exists:",dire,"/",filename
 			exists = True 
         return exists			
 if __name__ == '__main__':
