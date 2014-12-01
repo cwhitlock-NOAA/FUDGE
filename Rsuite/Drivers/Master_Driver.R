@@ -14,10 +14,20 @@ source(paste(FUDGEROOT,'Rsuite/Drivers/LoadLib.R',sep=''))
 
 #-------Add traceback call for error handling -------
 stored.opts <- options()[c('warn', 'error', 'showErrorCalls')]
-options(error=traceback, warn = 1, showErrorCalls=TRUE)
+error.handler.function <- function(){
+  message(traceback)
+  message("Quitting gracefully with exit status 1")
+  quit(save="no", status=1, runlast=FALSE)
+}
+#previously traceback
+options(error=error.handler.function, warn = 1, showErrorCalls=TRUE)
 ###See if there's a good way to return back to the original settings
 ###after this point. Probably not a component of a --vanilla run. 
 ###But it unquestionably simplifies debugging.
+
+#message("Deliberately attempting to break code")
+#message(stillfakevar)
+
 
 #------- Add libraries -------------
 LoadLib(ds.method)
@@ -100,6 +110,9 @@ LoadLib(ds.method)
 # construct file-names
 
 ###First, do simple QC checks, and set variables to be used later.
+
+#message("Attempting to break script deliberately")
+#print(fakevar)
 
 message("Setting downscaling method information")
 SetDSMethodInfo(ds.method)
