@@ -1,0 +1,162 @@
+#!/bin/csh
+#Wrapper for the R script used for post-processing options
+#Now pulling a lot of its argument and structure from create_runcode
+#but presumably putting its 
+
+module load nco
+module load gcp 
+set echo 
+
+#input file directory
+set INDIR = "/work/cew/downscaled/NOAA-GFDL/MPI-ESM-LR/rcp85/day/atmos/day/r1i1p1/v20111014/RRtxp1-CDFt-A38L01K00/tasmax/RR/OneD/v20140108/"
+set VAR = 'tasmax'
+set KFOLD = '0'
+set METHOD = 'compare.correct'
+set TMASKFILE = '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_20060101-20991231.nc'
+#set lons = $5
+#set lone = $6
+set MASKDIR = '/home/cew/Code/testing/QCMask.test/'
+set COMPDIR = '/home/cew/Code/testing/compare.test/'
+
+#set post-processing directory
+set FUDGEROOT = "/home/cew/Code/fudge2014/"
+
+#output file directory
+set lons=300
+set lone=300
+set var='tasmax'
+
+foreach i (`seq $lons 1 $lone`)
+ set counter=$i
+# mkdir "$INDIR/../../PostProcess/" #Will this throw an error if the directory already exists? 
+#For each latitude index (note: this is seriously going to be thrown off if we ever do the 3-block chunks:
+ echo "index $i"
+ set INFILE = ( ls $INDIR . | grep "$i" ) 
+ echo $INFILE
+# set SUFFIX = (grep -v ".nc" $INFILE)
+# set INFILE = "$INDIR/$INFILE"
+# set OUTDIR = "$INDIR/../../PostProcess/"
+ set OUTDIR = "/home/cew/Code/testing/"
+# set datapath = ""
+# set OUTFILE = "$OUTDIR/${METHOD}_${SUFFIX}.nc"
+# set QCFILE = 'ls $MASKDIR | grep "$index"'
+# set QCMASK = "$MASKDIR/$QCFILE"
+# set DATAFILE = (ls $COMPDIR | grep "$index")
+# set QCDATA = "$COMPDIR/$DATAFILE"
+# ncks -x -v $var $INFILE "$OUTDIR/$OUTFILE"
+
+# set commandstr = "postProc.Driver(in.file=$INFILE, var=$VAR, k.fold=$KFOLD, postproc.method=$METHOD, out.dir=$OUTDIR, postproc.outfile=$OUTFILE, tmask.infile=$TMASKFILE, qc.mask.path=$QCMASK, qc.data.path=$QCDATA)"
+
+# set commandstr = "\'postProc.Driver(in.dir='$INDIR', var='$VAR', k.fold=$KFOLD, postproc.method='$METHOD', out.dir='$OUTDIR', postproc.outdir='$OUTDIR', tmask.infile='$TMASKFILE', qc.mask.path='$MASKDIR', qc.data.path='$COMPDIR', lons=$lons, lone=$lone)\'"
+ set commandstr2 = "postProc.Driver(in.dir='$INDIR', var='$VAR', k.fold=$KFOLD, postproc.method='$METHOD', out.dir='$OUTDIR', postproc.outdir='$OUTDIR', tmask.infile='$TMASKFILE', qc.mask.path='$MASKDIR', qc.data.path='$COMPDIR', lons=$lons, lone=$lone)"
+
+set commandstr1 = "source('$FUDGEROOT/utils/pp/CallPostProcMethod.R')"
+
+ #Rscript --verbose -e "'source(\'$FUDGEROOT/utils/pp/CallPostProcMethod.R\')'" -e $commandstr
+Rscript --verbose -e "$commandstr1" -e "$commandstr2"
+#Rscript --verbose -e "$commandstr2"
+
+wait
+
+
+
+
+ set runpath=${rundir}/script.${cmipvar}.${method}.I$counter"_"$dsuffix"."$tstamp 
+ echo "#\!/bin/tcsh " > $runpath
+ echo "#PBS -S /bin/csh " >> $runpath 
+ echo "#PBS -l nodes=1:ppn=1,walltime=6:00:00 "  >> $runpath 
+ echo "#PBS -j oe "  >> $runpath 
+ echo "#PBS -r y " >> $runpath 
+ echo "#PBS -o ${joblog}/ind."'${MOAB_JOBNAME}.${MOAB_JOBID} ' >> $runpath 
+ echo "#PBS -N fudge_run "  >> $runpath  
+ echo "#PBS -E "  >> $runpath
+ echo "#PBS -q batch "  >> $runpath 
+ echo "source $basedir/utils/bin/init " >> $runpath 
+ echo "mkdir -p "$logdir  >> $runpath
+
+## Add lines to gcp input from /arch to VFTMP for processing
+ if ($SPAT_MASK_DIR != 'NA/') then
+         echo 'mkdir -p $TMPDIR'$SPAT_MASK_DIR  >> $runpath
+ endif
+ 
+ if ($AUX_CUSTOM != 'na') then
+	 set auxdir = `dirname $AUX_CUSTOM`
+         echo 'mkdir -p $TMPDIR'$auxdir  >> $runpath
+         echo "gcp -cd $AUX_CUSTOM "'$TMPDIR'$auxdir/  >> $runpath
+ endif
+ ## new performance ##
+ if ($TAR_TWIN != 'na') then
+         set tardir = `dirname $TAR_TWIN`
+         echo 'mkdir -p $TMPDIR'$tardir  >> $runpath
+         echo "gcp -cd $TAR_TWIN "'$TMPDIR'$tardir/  >> $runpath
+ endif
+ if ($HIS_TWIN != 'na') then
+         set hisdir = `dirname $HIS_TWIN`
+         echo 'mkdir -p $TMPDIR'$hisdir  >> $runpath
+         echo "gcp -cd $HIS_TWIN "'$TMPDIR'$hisdir/  >> $runpath
+ endif
+ if ($FUT_TWIN != 'na') then
+         set futdir = `dirname $FUT_TWIN`
+         echo 'mkdir -p $TMPDIR'$futdir  >> $runpath
+         echo "gcp -cd $FUT_TWIN "'$TMPDIR'$futdir/  >> $runpath
+ endif
+ ## new ##
+
+ if ($TARGET_DIR != 'NA/') then
+	 echo 'mkdir -p $TMPDIR'$TARGET_DIR  >> $runpath 
+ endif
+ if ($HIST_PRED_DIR != 'NA/') then 
+ echo 'mkdir -p $TMPDIR'$HIST_PRED_DIR  >> $runpath 
+ endif
+ if ($FUT_PRED_DIR != 'NA/') then
+ echo 'mkdir -p $TMPDIR'$FUT_PRED_DIR  >> $runpath 
+ endif
+ if ($SPAT_MASK_DIR != 'NA/') then
+        echo "gcp -cd $SPAT_MASK_DIR/*${SPAT_REGION}.I$counter"_"$dsuffix.nc "'$TMPDIR'$SPAT_MASK_DIR/  >> $runpath
+ endif
+ if ($TARGET_DIR != 'NA/') then
+ 	echo "gcp -cd $TARGET_DIR/*${T_FILE_START_YEAR}0101-${T_FILE_END_YEAR}1231.I$counter"_"$dsuffix.nc "'$TMPDIR'$TARGET_DIR/  >> $runpath 
+ endif
+ if ($HIST_PRED_DIR != 'NA/') then
+ 	echo "gcp -cd $HIST_PRED_DIR/*${H_FILE_START_YEAR}0101-${H_FILE_END_YEAR}1231.I$counter"_"$dsuffix.nc "'$TMPDIR'$HIST_PRED_DIR/  >> $runpath 
+ endif
+ if ($FUT_PRED_DIR != 'NA/') then
+ 	echo "gcp -cd $FUT_PRED_DIR/*${F_FILE_START_YEAR}0101-${F_FILE_END_YEAR}1231.I$counter"_"$dsuffix.nc "'$TMPDIR'$FUT_PRED_DIR/  >> $runpath 
+ endif
+        echo "mkdir -p $OUTDIR" >> $runpath
+#Add line to create mask directory
+echo "mkdir -p $OUTDIR/QCMask/" >> $runpath
+        echo "mkdir -p "'$TMPDIR'"$OUTDIR/  ">> $runpath
+#Add line to create mask directory
+echo "mkdir -p "'$TMPDIR'"$OUTDIR/QCMask/  ">> $runpath
+echo "R --vanilla < $basedir/scripts/${cmipvar}/${dexper}/runcode/code.$cmipvar.$dexper.I$counter"_"$dsuffix"."${tstamp} > ${logdir}/out.${dexper}.I$counter"_"$dsuffix"."${tstamp} &"  >> $runpath
+ echo "wait " >> $runpath 
+# Add lines to gcp output from VFTMP to /arch 
+
+ echo "gcp -cd "'$TMPDIR'"$OUTDIR/*.I$counter"_"$dsuffix.nc $OUTDIR/ " >> $runpath 
+#Add a line to copy the mask dir as well
+ echo "gcp -cd "'$TMPDIR'"$OUTDIR/QCMask/*.I$counter"_"$dsuffix.nc $OUTDIR/QCMask/ " >> $runpath 
+ echo $runpath
+ chmod u+x  $runpath
+end
+echo "Done."
+
+# set index = $index + 1
+#end
+
+#Note that this means processOutput also needs to contain the sourcing of the FUDGE utils in its code, 
+#as well as sourcing of the FUDGE libraries.
+
+#Finally, call cattool on the final output
+#cattool -i $OUTDIR $SUFFIX "$OUTDIR/$METHOD_${SUFFIX}/" $region_name
+
+#INDIR MINIFILEPREFIX OFILE AUXDIR region=region_name"
+#I do not have a clear idea what is meant by AUXDIR
+
+#Rscript --verbose -e source('/home/cew/Code/fudge2014//utils/pp/CallPostProcMethod.R') -e postProc.Driver(in.dir='/work/cew/downscaled/NOAA-GFDL/MPI-ESM-LR/rcp85/day/atmos/day/r1i1p1/v20111014/RRtxp1-CDFt-A38L01K00/tasmax/RR/OneD/v20140108/', var='tasmax', k.fold=0, postproc.method='compare.correct', out.dir='/home/cew/Code/testing/', postproc.outdir='/home/cew/Code/testing/', tmask.infile='/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_20060101-20991231.nc', qc.mask.path='/home/cew/Code/testing/QCMask.test/', qc.data.path='/home/cew/Code/testing/compare.test/', lons=300, lone=300)
+
+
+#'/usr/local/x64/R/R-2.15.2/lib64/R/bin/R --slave --no-restore -e source('/home/cew/Code/fudge2014//utils/pp/CallPostProcMethod.R') -e postProc.Driver(in.dir='/work/cew/downscaled/NOAA-GFDL/MPI-ESM-LR/rcp85/day/atmos/day/r1i1p1/v20111014/RRtxp1-CDFt-A38L01K00/tasmax/RR/OneD/v20140108/', --args var='tasmax', k.fold=0, postproc.method='compare.correct', out.dir='/home/cew/Code/testing/', postproc.outdir='/home/cew/Code/testing/', tmask.infile='/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_20060101-20991231.nc', qc.mask.path='/home/cew/Code/testing/QCMask.test/', qc.data.path='/home/cew/Code/testing/compare.test/', lons=300,'
+
+	
+	
