@@ -33,4 +33,17 @@ incomplete release notes
 --
 08/07/2014
 
+2/6/2014: 
+-- if <ifpreexist> has move: If either OneD output or scripts already exist, expergen throws warning and moves the old outout to a new directory
+-- BCQM and EDQM methods now sort quantile output by the order of the values in the future_predictor (coarse future, CF) dataset
+-- Support for non-SCSC0p1 grids
+-- Modified directory structure for input and output datasets
+- Downscaled region added to directory structure
+-- spatial and temporal dimension data and metadata obtained from input files rather than the mask files
+-- Now possible to run all parts of the workflow without needing to specify a spatial or temporal mask
+-- Expergen writes a command file that can be sourced to run postProc
+
+
+Regression test changes: 
+
 a1r, Placing set of FudgeIO functions

@@ -354,7 +354,7 @@ message(paste("FUDGE training took", proc.time()[1]-start.time[1], "seconds to r
 #print("STATS: Downscaled output")
 #MyStats(ds$esd.final,verbose="yes")
 
-if('pr'%in%target.var && exists('pr_opts')){
+if( (grep('pr', target.var)==1) && exists('pr_opts')){
   #if(pr.post.proc){
     print(paste("Adjusting downscaled pr values"))
     out.mask <- MaskPRSeries(ds$esd.final, units=list.fut$units$value , index = pr.mask.opt)
