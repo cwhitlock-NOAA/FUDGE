@@ -1,0 +1,5 @@
+#
+set xmlgen = "/home/esd/PROJECTS/DOWNSCALING/SUBPROJECTS/RR/XMLgen/XMLgen.csh"
+foreach f (`ff RR\*.txt`)
+$xmlgen < $f
+end

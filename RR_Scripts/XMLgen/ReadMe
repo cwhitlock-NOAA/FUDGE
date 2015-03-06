@@ -1,0 +1,9 @@
+#
+#  For creating Red River (fudge/cinnamon) experiments.
+#  Assumes all scripts are located in $BASEDIR/XMLgen directory, and 
+#  $xmlGenDir in XMLGen/{XMLgen_wrapper.csh,XMLgen.csh,XMLgen.pick_rips.csh}
+#     = $BASEDIR/XMLgen
+
+# e.g. set xmlGenDir = /home/esd/PROJECTS/DOWNSCALING/SUBPROJECTS/RR/RR_Scripts/XMLgen
+#
+# Then run:  $xmlGenDir/XMLgen_wrapper.csh
