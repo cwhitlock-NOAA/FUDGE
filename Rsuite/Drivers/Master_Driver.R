@@ -229,6 +229,15 @@ target.filename <- GetMiniFileName(target.var,target.freq_1,target.model_1,targe
                                    target.file.start.year_1,target.file.end.year_1,i.file,file.j.range)
 print(target.filename)
 list.target <- ReadNC(OpenNC(target.indir_1, target.filename), var=target.var, dim="spatial")#,dstart=c(1,1,1),dcount=c(1,140,16436)
+# ###Adding check for Z-dimension
+# if(length(dim(list.target$clim.in)) > 4){
+#   message("Warning in Master_Driver: Dimensions of", target.var, "in", target.filename, 
+#           "are", paste(dim(list.target$clim.in), collapse=" "), ", and are not 3-dimensional.", 
+#   "Degenerate vars will be subtracted for calculation purposes and added back in for writing at end.")
+#   
+# }else{
+#   make.three.dimensional==FALSE
+# }
 message("Applying spatial mask to target data")
 list.target$clim.in <- ApplySpatialMask(list.target$clim.in, spat.mask$masks[[1]])
 
@@ -402,8 +411,9 @@ out.file <- paste(output.dir,"/", out.filename,sep='')
 #bounds.list.combined <- c(spat.mask$vars, tmask.list[[length(tmask.list)]]$vars)
 #isBounds <- length(bounds.list.combined) > 1
 ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
-                          xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-                          downscale.tseries=list.fut$dim$time, 
+                          dim.list=c(list.target$dim, list.fut$dim),
+#                           xlon=list.target$dim$lon,ylat=list.target$dim$lat,
+#                           downscale.tseries=list.fut$dim$time, 
                           var.data=c(list.target$vars, list.fut$vars),
                           units=list.fut$units$value,
                           lname=paste('Downscaled ',list.fut$long_name$value,sep=''),
@@ -464,8 +474,9 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
     }
     message(paste('attempting to write to', qc.file))
     qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
-                              xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-                              downscale.tseries=list.fut$dim$time, 
+                              dim.list=c(list.target$dim, list.fut$dim),
+#                               xlon=list.target$dim$lon,ylat=list.target$dim$lat,
+#                               downscale.tseries=list.fut$dim$time, 
                               var.data=c(list.target$vars, list.fut$vars),
                               prec='float',missval=1.0e20,
                               units="1",
@@ -498,17 +509,17 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
 #regression testing scripts parsing stdout
 #message(paste('Final Downscaled output file location:', sub(pattern=TMPDIR, replacement="", ds.out.filename),sep=""))
 message(paste('Final Downscaled output file location:', ds.out.filename,sep=""))
-# corr.future <- cor(as.vector(ds$esd.final), as.vector(list.fut$clim.in), use='pairwise.complete.obs')
-# message('printing corr.future')
-# message(corr.future)
-# cor.vector <- c("list.fut$clim.in", "list.hist$clim.in", "list.target$clim.in")
-# for (j in 1:length(cor.vector)){
-#   cor.var <- cor.vector[j]
-#   cor.out <- eval(parse(text=cor.var))
-#   if(length(cor.out) > length(ds$esd.final)){
-#     out.cor <- cor(as.vector(ds$esd.final), as.vector(cor.out)[1:length(ds$esd.final)], use='pairwise.complete.obs')
-#   }else{
-#   out.cor <- cor(as.vector(ds$esd.final)[1:length(cor.out)], as.vector(cor.out), use='pairwise.complete.obs')
-#   }
-#   print(paste("ds$esd.final", ",", cor.var, "):", out.cor, sep=""))
-# }
+corr.future <- cor(as.vector(ds$esd.final), as.vector(list.fut$clim.in), use='pairwise.complete.obs')
+message('printing corr.future')
+message(corr.future)
+cor.vector <- c("list.fut$clim.in", "list.hist$clim.in", "list.target$clim.in")
+for (j in 1:length(cor.vector)){
+  cor.var <- cor.vector[j]
+  cor.out <- eval(parse(text=cor.var))
+  if(length(cor.out) > length(ds$esd.final)){
+    out.cor <- cor(as.vector(ds$esd.final), as.vector(cor.out)[1:length(ds$esd.final)], use='pairwise.complete.obs')
+  }else{
+  out.cor <- cor(as.vector(ds$esd.final)[1:length(cor.out)], as.vector(cor.out), use='pairwise.complete.obs')
+  }
+  print(paste("ds$esd.final", ",", cor.var, "):", out.cor, sep=""))
+}

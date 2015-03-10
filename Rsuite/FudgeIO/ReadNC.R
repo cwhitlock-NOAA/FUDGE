@@ -60,6 +60,8 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   attname <- 'units' 
   units <- ncatt_get(nc.object, var.name, attname)
     attr(clim.in, "units") <- units
+  prec <- ncatt_get(nc.object, var.name, "prec")
+    attr(clim.in, "prec") <- prec
   ###Test code for determining what happens for unitless vars
   #######################################################
   #Control getting the dimensions and other variables in the output file
@@ -108,7 +110,8 @@ get.space.vars <- function(nc.object, var){
     dim <- spat.varnames[[sd]]
     spat.dims[[dim]] <- nc.get.dim.for.axis(nc.object, var, ax)
     #Make sure that original file is being included, in order to support attribute cloning
-    attr(time.dims[[dim]], "filename") <- attr(nc.object, "filename")
+    print(paste("writing filename attribute", nc.object$filename))
+    attr(spat.dims[[dim]], "filename") <- nc.object$filename
   }
   #Obtain any dimensions that are not time
   #Obtain any variables that do not reference time
@@ -158,7 +161,7 @@ get.time.vars <- function(nc.object, var){
     dim <- time.varnames[[td]]
     time.dims[[dim]] <- nc.get.dim.for.axis(nc.object, var, ax)
     #Make sure that original file is being included, in order to support attribute cloning
-    attr(time.dims[[dim]], "filename") <- attr(nc.object, "filename")
+    attr(time.dims[[dim]], "filename") <- nc.object$filename
   }
   #Obtain any dimensions that are not time
   #Obtain any variables that do not reference time

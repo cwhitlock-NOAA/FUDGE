@@ -1,6 +1,9 @@
 # Aparna Radhakrishnan 08/04/2014
-WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missval=1.e20,
-                     time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
+WriteNC <-  function(filename,data.array,var.name,
+                     #xlon,ylat,time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
+                     dim.list,
+                     prec='double', missval=1.e20,
+                     #time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
                      start.year="undefined",units ,calendar='irrelevant',lname=var.name,cfname=var.name, 
                      bounds=FALSE, bnds.list=NA, var.data=NA) {
   #'Creates file filename (netCDF type) with the variable  var.name along with the 
@@ -66,11 +69,25 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
     #Define variable list and populate it
     var.dat <- list()    
     #Write the variable containing downscaled data
-    if(exists("xlon") & (xlon[1] != '')){
-      var.dat[[var.name]] <- ncvar_def(var.name,units,list(xlon,ylat,downscale.tseries),missval=missval,longname=lname,prec=prec)#x,y,t1
+#     if(exists("xlon") & (xlon[1] != '')){
+#       var.dat[[var.name]] <- ncvar_def(var.name,units,list(xlon,ylat,downscale.tseries),missval=missval,longname=lname,prec=prec)#x,y,t1
+#     }else{
+#       var.dat[[var.name]] <- ncvar_def(var.name,units,list(ylat, downscale.tseries),missval=missval,longname=lname,prec=prec, verbose=TRUE)
+#     }
+    #Changed 3-10 to support writing ensemble dimensions
+    true.dim <- unlist((lapply(dim.list, "[[", "len")))
+    if(prod(true.dim)==prod(dim(data.array))){
+      #If the only difference between the dims stored from the input files
+      #and the dimensions of the data array are degenerate dimensions
+      
     }else{
-      var.dat[[var.name]] <- ncvar_def(var.name,units,list(ylat, downscale.tseries),missval=missval,longname=lname,prec=prec, verbose=TRUE)
+      message(paste("Warning in WriteNC: the data in data.array has dimensions of", 
+                    paste(dim(data.array), collapse=" "), 
+                    "but the dimensions provided for writing are of the form", 
+                    paste(true.dim, collapse=" "), "; all data may not be written to file."))
     }
+    var.dat[[var.name]] <- ncvar_def(var.name,units,dim.list,missval=missval,longname=lname,prec=prec)#x,y,t1
+       
     #1-5 alternate structure
     bnds <- ncdim_def("bnds", "", c(1,2))
     for (v in 1:length(var.data)){
@@ -87,9 +104,11 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
           print(var.dim[[d]]) #Blame R's need to return all functions as elements of a list.
           var.dimlist[[d]] <- switch(as.character(var.dim[d]), 
                                      "bnds"=bnds, 
-                                     "lon"=xlon, 
-                                     "lat"=ylat, 
-                                     "time"=downscale.tseries) #There should probably be an error here, but not sure what it would be
+                                     dim.list[[as.character(var.dim[d])]])
+#Commented out 3-10 to support the modified dim id structure
+#                                      "lon"=xlon, 
+#                                      "lat"=ylat, 
+#                                      "time"=downscale.tseries) #There should probably be an error here, but not sure what it would be
         }
       }
       var.dat[[var]] <- ncvar_def(var, #var.data[[v]], #Don't forget to add the data in somewhere 
@@ -118,25 +137,41 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
           ncatt_put(nc.obj, loop.var,  names(all.att.list)[[at]], all.att.list[[at]])
         }
       }
-    }   
-    #Link axes to the dimensions
-    ncatt_put(nc.obj,"time","axis",'T')
-    ncatt_put(nc.obj,"lat","axis",'Y')
-    ncatt_put(nc.obj,"lon","axis",'X')
-
-      #Link bounds variables to the corresponding dims
-      ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
-      ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
-      ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
-    #And establish long names in the code
-    ncatt_put(nc.obj,"time","standard_name","time")
-    ncatt_put(nc.obj, "time", "long_name", "time")
-    ncatt_put(nc.obj,"lat","standard_name","latitude")
-    ncatt_put(nc.obj,"lat","long_name","latitude")
-    ncatt_put(nc.obj,"lon","standard_name","longitude")
-    ncatt_put(nc.obj,"lon","long_name","longitude")
-    ncatt_put(nc.obj,var.dat[[var.name]],"units",units)
-    ncatt_put(nc.obj,var.dat[[var.name]],"standard_name",cfname)
+    }
+    #Modified 3-10-2015: This should keep the attributes the same in the input as the output files
+    for (i in 1:length(dim.list)){
+      print(i)
+      dim.name <- names(dim.list)[i]
+      print(paste("dim name:", dim.name))
+      orig.file <- attr(dim.list[[i]], "filename")
+      if(!is.null(orig.file)){
+        print(orig.file)
+        print(filename)
+        dim.name <- names(dim.list)[i]
+        nc.copy.atts(nc_open(orig.file), dim.name, nc.obj, dim.name)
+      }else{
+        print("null dim; skipping to next")
+      }
+    }
+    
+#     #Link axes to the dimensions
+#     ncatt_put(nc.obj,"time","axis",'T')
+#     ncatt_put(nc.obj,"lat","axis",'Y')
+#     ncatt_put(nc.obj,"lon","axis",'X')
+# 
+#       #Link bounds variables to the corresponding dims
+#       ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
+#       ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
+#       ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
+#     #And establish long names in the code
+#     ncatt_put(nc.obj,"time","standard_name","time")
+#     ncatt_put(nc.obj, "time", "long_name", "time")
+#     ncatt_put(nc.obj,"lat","standard_name","latitude")
+#     ncatt_put(nc.obj,"lat","long_name","latitude")
+#     ncatt_put(nc.obj,"lon","standard_name","longitude")
+#     ncatt_put(nc.obj,"lon","long_name","longitude")
+#     ncatt_put(nc.obj,var.dat[[var.name]],"units",units)
+#     ncatt_put(nc.obj,var.dat[[var.name]],"standard_name",cfname)
     ########### write grid coordinate bounds ####################
     
     #############################################################  
