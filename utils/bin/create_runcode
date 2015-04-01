@@ -8,10 +8,33 @@ echo "Making R code starters for lon slices " $argv[7] #"to " $argv[44]
 #####################################################
 set TEMPLATE_LIST = ()
 set PREDICTOR = $argv[1]
-set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"'"${PREDICTOR}"'" ) 
+#set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"'"${PREDICTOR}"'" ) 
+## handle multi predictors  ##
+set pctr=1
+set predlist = ()
+set predlist1= ()
+set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+while($cmd != '')
+set predlist = ( $predlist "'"${cmd}"'" )
+if ($pctr > 1) then
+set predlist1 = ( $predlist1",'"${cmd}"'")
+else
+set predlist1 = ( $predlist1"'"${cmd}"'")
+endif
+@ pctr = $pctr + 1
+set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+end
+## preds in c list predlist now##
+##end handle multiple predictors
+echo "predlist $predlist1"
+set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"list("${predlist1}")" )
+echo $TEMPLATE_LIST
+echo "DEbug1"
+
 set TARGET = $argv[2]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "TARGET":"'"${TARGET}"'" )
 set op_grid = $argv[3]
+echo "Debug 55"
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "OP.GRID":"'"${op_grid}"'" )
 set spat_mask_dir = $argv[4]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "SPAT.MASK.DIR":"'"${spat_mask_dir}"'" )
@@ -93,15 +116,14 @@ set esdgen = $argv[42]
 set basedir = $argv[43]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "FUDGEROOT":"'"${basedir}"'")
 set iend = $argv[44]
+echo $iend
 set params = $argv[45]
 if($params == 'na') then 
  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PARAMS":"args=list('"${params}"')" )
 else
  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PARAMS":"args=list("${params}")" )
 endif
-echo "debug"
 set ds_region = $argv[46]
-echo "debug 2"
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "DS.REGION":"'"${ds_region}"'")
 set auxcustom = $argv[47]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "FUT.TIME.TRIM.MASK":"'"${auxcustom}"'")
@@ -116,6 +138,7 @@ set adjust_out = $argv[51]
 set sbasedir = $argv[52]
 set pr_opts = $argv[53]
 ###############################
+
 if($pr_opts == 'na') then
  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PR_OPTS":"" )
 else
@@ -124,14 +147,15 @@ endif
 set branch = $argv[54]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "BRANCH":"'"${branch}"'")
 
-
 #########qclist################
 set masklist = "list(mask1=list(type='${qc_type}',adjust.out='${adjust_out}',qc.mask='${qc_switch}'))"
 
 ############################### 
 #better way to get masklist and options #todo clean up irrelevant options in this
 set masklist = $argv[55]
-echo $masklist
+set idirsuffix = $argv[56]
+set TEMPLATE_LIST = ( $TEMPLATE_LIST "PRED.DIR.SUFFIX":"'"${idirsuffix}"'")
+
 if($masklist == na) then
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "MASK.LIST":'"na"')
 else
@@ -170,7 +194,7 @@ foreach i (`seq $lon_start 1 $lon_end`)
   foreach TEMPLATE ($TEMPLATE_LIST)
    set find =  `echo "$TEMPLATE" | cut -d':' -f1` 
    set replace = `echo "$TEMPLATE" | cut -d':' -f2` 
-#   echo $find $replace
+   echo $find $replace
    if($find == 'PARAMS') then
 	   sed -i 's%<'$find'>%'$replace% $codepath
    else	

@@ -23,6 +23,7 @@ project = ""
 ppn = 2 #TODO get from XML custom?
 overwrite = False #default don't overwrite existing output or scripts
 preexist_glob = "erase" #if overwriting old, default is erasing, not archiving
+idirsuffix = ""
 def checkTags(dictParams,key):
 	        if(dictParams.has_key(key)):
                	 	val = dictParams[key]
@@ -279,21 +280,26 @@ def listVars(uinput,basedir=None,msub=False,pp=False):
 	dict_target,listt = getFacets(target_id,target,dim,'target_id',output_grid)
 	#print dict_target
 	############ historical predictor ######################
-        dict_hist,listh = getFacets(hist_id,predictor,dim,'hist_id',output_grid)
+        dict_hist,listh = getFacets(hist_id,"","",'hist_id',"") #make it base
 	#print dict_hist
 	########### future predictor information ############## 
-        dict_fut,listf = getFacets(fut_id,predictor,dim,'fut_id',output_grid)
+        dict_fut,listf = getFacets(fut_id,"","",'fut_id',"") #make it basedir for support 2x vars
 	#print dict_fut
 	###########  esdgen information ####################################
 
 	####################################################################
 	target_dir = getDir(listt,'hidir')
+	target_dir = os.path.abspath(target_dir)
 	print "target dir: ",target_dir 
         hist_pred_dir = getDir(listh,'lodir')
+        hist_pred_dir = os.path.abspath(hist_pred_dir)	
 	print "historical predictor dir",hist_pred_dir
 	fut_pred_dir = getDir(listf,'futdir')
+	fut_pred_dir = os.path.abspath(fut_pred_dir)
 	print "future predictor dir",fut_pred_dir
-
+	global idirsuffix
+        idirsuffix = "/"+output_grid+"/"+dim+"/"
+	print "idirsuffix",idirsuffix
 	#### get outdir #####
         if(out_dir != 'na'):
             category = 'downscaled'
@@ -349,7 +355,7 @@ def listVars(uinput,basedir=None,msub=False,pp=False):
             fut_freq = dict_fut['freq'] #CEW edit mip to freq
 	    tstamp = str(datetime.datetime.now().date())+"."+str(datetime.datetime.now().time())
 
-	    return output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,experiment,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists
+	    return output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,experiment,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists,idirsuffix
 ############end of listVars###################### 
 def main():
     #################### args parsing ############
@@ -420,7 +426,7 @@ def main():
 					msub = False
                 		msub = vals 
         #########  call listVars() #############################################################
-	output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,expconfig,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists= listVars(uinput,basedir,msub)
+	output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,expconfig,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_mask,qc_varname,qc_type,adjust_out,sbase,pr_opts,masklists,idirsuffix= listVars(uinput,basedir,msub)
         ######### call script creators..  #######################################################
         ############################### 1 ###############################################################
         #  make.code.tmax.sh 1 748 756 /vftmp/Aparna.Radhakrishnan/pid15769 outdir 1979 2008 tasmax
@@ -478,7 +484,7 @@ def main():
         params_new =  '"'+str(params)+'\"'
 	params_pr_opts = '"'+str(pr_opts)+'\"'
         make_code_cmd = make_code_cmd +" "+params_new+" "+"'"+str(ds_region)+"'"
-        make_code_cmd = make_code_cmd+" "+str(auxcustom)+" "+str(qc_mask)+" "+str(qc_varname)+" "+str(qc_type)+" "+str(adjust_out)+" "+str(sbase)+" "+str(params_pr_opts)+" "+str(branch)+" "+'"'+str(masklists)+'"' 
+        make_code_cmd = make_code_cmd+" "+str(auxcustom)+" "+str(qc_mask)+" "+str(qc_varname)+" "+str(qc_type)+" "+str(adjust_out)+" "+str(sbase)+" "+str(params_pr_opts)+" "+str(branch)+" "+'"'+str(masklists)+'"'+" "+str(idirsuffix) 
 	#cprint make_code_cmd
         #p = subprocess.Popen(make_code_cmd +" "+params_new,shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
         p = subprocess.Popen(make_code_cmd,shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
@@ -489,14 +495,15 @@ def main():
          sys.exit(0)
         #cprint output, errors
 	#cprint "----Log-----"
-        #cprint output,errors
+        print output,errors
         ###############################################################################################
         print "1- completed\n"
         #print "debug............msub turned ",msub
         ############################### 2 ################################################################
 	#target_time_window,hist_time_window,fut_time_window
         script2Loc = basedir+"/utils/bin/"+"create_runscript"
-        create_runscript_cmd = script2Loc+" "+str(lons)+" "+str(lone)+" "+str(expconfig)+" "+str(basedir)+" "+target+" "+method+" "+target_dir+" "+hist_pred_dir+" "+fut_pred_dir+" "+outdir+" "+str(file_j_range)+" "+tstamp+" "+str(target_file_start_time)+" "+str(target_file_end_time)+" "+str(hist_file_start_time)+" "+str(hist_file_end_time)+" "+str(fut_file_start_time)+" "+str(fut_file_end_time)+" "+str(spat_mask)+" "+str(region)+" "+auxcustom+" "+target_time_window+" "+hist_time_window+" "+fut_time_window+" "+sbase
+        create_runscript_cmd = script2Loc+" "+str(lons)+" "+str(lone)+" "+str(expconfig)+" "+str(basedir)+" "+target+" "+method+" "+target_dir+" "+hist_pred_dir+" "+fut_pred_dir+" "+outdir+" "+str(file_j_range)+" "+tstamp+" "+str(target_file_start_time)+" "+str(target_file_end_time)+" "+str(hist_file_start_time)+" "+str(hist_file_end_time)+" "+str(fut_file_start_time)+" "+str(fut_file_end_time)+" "+str(spat_mask)+" "+str(region)+" "+auxcustom+" "+target_time_window+" "+hist_time_window+" "+fut_time_window+" "+sbase+" "+idirsuffix+" "+"'"+str(predictor)+"'"
+	#print create_runscript_cmd
         print "Step 2: Individual Runscript generation: \n"+create_runscript_cmd
         p1 = subprocess.Popen('tcsh -c "'+create_runscript_cmd+'"',shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
         print "Step 2: Individual runscript  creation.. in progress"
@@ -507,7 +514,7 @@ def main():
          print "Step2:!!!! FAILED !!!!, please contact developer."
          print output1, errors1
          sys.exit(0)
-        #print output1, errors1
+        print output1, errors1
         #c print errors1
         
         ###################################### 3 ################################################################

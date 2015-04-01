@@ -53,6 +53,7 @@ def postProc():
            print "ERROR: BASEDIR environment variable not set"
 	   sys.exit(1)
      output_grid,kfold,lone,region,fut_train_start_time,fut_train_end_time,file_j_range,hist_file_start_time,hist_file_end_time,hist_train_start_time,hist_train_end_time,lats,late,lons,late, basedir,method,target_file_start_time,target_file_end_time,target_train_start_time,target_train_end_time,spat_mask,fut_file_start_time,fut_file_end_time,predictor,target,params,outdir,dversion,dexper,target_scenario,target_model,target_freq,hist_scenario,hist_model,hist_freq,fut_scenario,fut_model,fut_freq,hist_pred_dir,fut_pred_dir,target_dir,expconfig,target_time_window,hist_time_window,fut_time_window,tstamp,ds_region,target_ver,auxcustom,qc_switch,qc_varname,qc_type,adjust_out,sbase,pr_opts = expergen.listVars(uinput,basedir=basedir,pp=True) 
+     print "output_grid......",output_grid
      basedire = basedir	
      esdMethod = method
      varname = target 
@@ -92,8 +93,8 @@ def postProc():
                                         exists = checkExists(vname,indir,region,ver,freq,expconfig,exper_rip,predModel,str(fut_train_start_time),str(fut_train_end_time),suff,force)
              				if (exists == False):
 
-           					print "PP Output does not exist already",indir
-						cnt = call_ppFudge(basedire,indir,esdMethod,vname,str(expconfig),exper_rip,region,ver,lons,lone,lats,late,grid,freq,str(fut_train_start_time),str(fut_train_end_time),obsid)
+           					print "PP Output does not exist already",indir,output_grid
+						cnt = call_ppFudge(basedire,indir,esdMethod,vname,str(expconfig),exper_rip,region,ver,lons,lone,lats,late,grid,freq,str(fut_train_start_time),str(fut_train_end_time),obsid,output_grid)
 						print "call_ppFudge: COMPLETE "
 						print "fudgeList invocation: BEGINS"
 						slogloc = sbase+"/"+"experiment_info"
@@ -136,7 +137,7 @@ def checkExists(var,indir,region,ver,freq,dexper,exper_rip,predictor,start,end,s
 					print filename
 				        return exists		
 
-def call_ppFudge(basedire,indir,method,var,dexper,exper_rip,region,ver,lons,lone,lats,late,grid,freq,start,end,obsid):
+def call_ppFudge(basedire,indir,method,var,dexper,exper_rip,region,ver,lons,lone,lats,late,grid,freq,start,end,obsid,output_grid):
         script1Loc = basedire+"/utils/pp/ppFudge" #"/main/code/esd/autogen/ppFudge"
 	print script1Loc 
 #check if output already exists
@@ -144,7 +145,7 @@ def call_ppFudge(basedire,indir,method,var,dexper,exper_rip,region,ver,lons,lone
 #TODO rem redundant region to cattool
 
         fileprefix =var+"_"+freq+"_"+dexper+"_"+exper_rip+"_"+region+"_"+start+"0101"+"-"+end+"1231" 
-	cmd =  script1Loc+" "+basedire+" "+indir+" "+method+" "+var+" "+dexper+" "+exper_rip+" "+region+" "+ver+" "+str(lons)+" "+str(lone)+" "+str(lats)+" "+str(late)+" "+str(grid)+" "+fileprefix+" "+obsid
+	cmd =  script1Loc+" "+basedire+" "+indir+" "+method+" "+var+" "+dexper+" "+exper_rip+" "+region+" "+ver+" "+str(lons)+" "+str(lone)+" "+str(lats)+" "+str(late)+" "+str(grid)+" "+fileprefix+" "+obsid+" "+output_grid
         print "PP ..in progress", cmd 
        	#p = subprocess.Popen('tcsh -c "'+cmd+'"',shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
         p = subprocess.Popen('tcsh -c "'+cmd+'"',shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE) 
