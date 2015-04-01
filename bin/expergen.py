@@ -471,7 +471,7 @@ def main():
 		   print "scriptdir "+sd+" does not exist. Looks like a clean slate "
         #print  "hist_freq"+hist_freq
         script1Loc = basedir+"/utils/bin/create_runcode"
-        make_code_cmd = script1Loc+" "+str(predictor)+" "+str(target)+" "+str(output_grid)+" "+str(spat_mask)+" "+str(region)
+        make_code_cmd = script1Loc+" "+"'"+str(predictor)+"'"+" "+str(target)+" "+str(output_grid)+" "+str(spat_mask)+" "+str(region)
         make_code_cmd = make_code_cmd+" "+str(file_j_range)+" "+str(lons)+" "+str(lats)+" "+str(late)
 	make_code_cmd = make_code_cmd+" "+str(hist_file_start_time)+" "+str(hist_file_end_time)+" "+str(hist_train_start_time)+" "+str(hist_train_end_time)+" "+str(hist_scenario)+" "+str(hist_model)+" "+hist_freq+" "+str(hist_pred_dir)+" "+str(hist_time_window)
         make_code_cmd = make_code_cmd+" "+str(fut_file_start_time)+" "+str(fut_file_end_time)+" "+str(fut_train_start_time)+" "+str(fut_train_end_time)+" "+str(fut_scenario)+" "+str(fut_model)+" "+fut_freq+" "+str(fut_pred_dir)+" "+str(fut_time_window)
@@ -485,7 +485,7 @@ def main():
 	params_pr_opts = '"'+str(pr_opts)+'\"'
         make_code_cmd = make_code_cmd +" "+params_new+" "+"'"+str(ds_region)+"'"
         make_code_cmd = make_code_cmd+" "+str(auxcustom)+" "+str(qc_mask)+" "+str(qc_varname)+" "+str(qc_type)+" "+str(adjust_out)+" "+str(sbase)+" "+str(params_pr_opts)+" "+str(branch)+" "+'"'+str(masklists)+'"'+" "+str(idirsuffix) 
-	#cprint make_code_cmd
+#c	print "cmds", make_code_cmd
         #p = subprocess.Popen(make_code_cmd +" "+params_new,shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
         p = subprocess.Popen(make_code_cmd,shell=True,stdout=PIPE,stdin=PIPE, stderr=PIPE)
         output, errors = p.communicate() 

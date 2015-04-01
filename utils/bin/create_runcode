@@ -4,37 +4,38 @@ if ($#argv < 11) then
  echo "Usage: make.code.tmax.sh number_of_years_to_leave_out lon_start lon_end lat_start lat_end basedir outdir [start_year] [end_year] [varname_to_downscale] [futurelist]"
  exit
 endif
-echo "Making R code starters for lon slices " $argv[7] #"to " $argv[44]
+echo "Making R code starters for slices " $argv[7] #"to " $argv[44]
 #####################################################
 set TEMPLATE_LIST = ()
-set PREDICTOR = $argv[1]
+set PREDICTOR=`echo $argv[1]`
 #set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"'"${PREDICTOR}"'" ) 
 ## handle multi predictors  ##
 set pctr=1
 set predlist = ()
 set predlist1= ()
-set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+set cmd = "`echo ${PREDICTOR} | cut -d',' -f$pctr `"
+
 while($cmd != '')
+set cmd = `echo ${cmd} | tr -s " " `
+
 set predlist = ( $predlist "'"${cmd}"'" )
+
 if ($pctr > 1) then
 set predlist1 = ( $predlist1",'"${cmd}"'")
 else
 set predlist1 = ( $predlist1"'"${cmd}"'")
 endif
 @ pctr = $pctr + 1
-set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+set cmd =  "`echo ${PREDICTOR} | cut -d',' -f$pctr `"
 end
 ## preds in c list predlist now##
 ##end handle multiple predictors
-echo "predlist $predlist1"
-set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"list("${predlist1}")" )
-echo $TEMPLATE_LIST
-echo "DEbug1"
+echo "predlist1 $predlist1"
 
+set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"list("${predlist1}")" )
 set TARGET = $argv[2]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "TARGET":"'"${TARGET}"'" )
 set op_grid = $argv[3]
-echo "Debug 55"
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "OP.GRID":"'"${op_grid}"'" )
 set spat_mask_dir = $argv[4]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "SPAT.MASK.DIR":"'"${spat_mask_dir}"'" )
@@ -116,7 +117,6 @@ set esdgen = $argv[42]
 set basedir = $argv[43]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "FUDGEROOT":"'"${basedir}"'")
 set iend = $argv[44]
-echo $iend
 set params = $argv[45]
 if($params == 'na') then 
  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PARAMS":"args=list('"${params}"')" )
@@ -128,13 +128,9 @@ set TEMPLATE_LIST = ( $TEMPLATE_LIST "DS.REGION":"'"${ds_region}"'")
 set auxcustom = $argv[47]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "FUT.TIME.TRIM.MASK":"'"${auxcustom}"'")
 set qc_switch = $argv[48]
-#set TEMPLATE_LIST = ( $TEMPLATE_LIST "QC.SWITCH":"'"${qc_switch}"'")
 set qc_varname = $argv[49]
-#set TEMPLATE_LIST = ( $TEMPLATE_LIST "QC.VARNAME":"'"${qc_varname}"'")
 set qc_type = $argv[50] 
-#set TEMPLATE_LIST = ( $TEMPLATE_LIST "QC.METHOD":"'"${qc_type}"'")
 set adjust_out = $argv[51]
-#set TEMPLATE_LIST = ( $TEMPLATE_LIST "ADJUST.OUT":"'"${adjust_out}"'")
 set sbasedir = $argv[52]
 set pr_opts = $argv[53]
 ###############################
@@ -159,7 +155,7 @@ set TEMPLATE_LIST = ( $TEMPLATE_LIST "PRED.DIR.SUFFIX":"'"${idirsuffix}"'")
 if($masklist == na) then
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "MASK.LIST":'"na"')
 else
-echo $masklist
+#echo $masklist
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "MASK.LIST":${masklist})
 endif
 ########################### 
@@ -178,11 +174,10 @@ if ( $lon_end < $lon_start ) then
  echo "Please check second argument: lon_end  should be greater than or equal to lon_start"
  exit
 endif
-
 set codeprefix=$sbasedir/runcode/
 mkdir -p $codeprefix
 set cnter = 1
-
+echo "checking.."
 #new
 #TODO we could store templates in a method sub-dir and switch it based on the templates
 set template = $basedir/utils/templates/runcode/template_runcode.R 
@@ -194,12 +189,11 @@ foreach i (`seq $lon_start 1 $lon_end`)
   foreach TEMPLATE ($TEMPLATE_LIST)
    set find =  `echo "$TEMPLATE" | cut -d':' -f1` 
    set replace = `echo "$TEMPLATE" | cut -d':' -f2` 
-   echo $find $replace
+  # echo $find $replace
    if($find == 'PARAMS') then
 	   sed -i 's%<'$find'>%'$replace% $codepath
    else	
     sed -i 's%<'$find'>%'$replace% $codepath
-
    endif
  end
   echo "R starter Code location: $codepath"
