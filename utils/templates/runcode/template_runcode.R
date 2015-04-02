@@ -39,6 +39,9 @@ rm(list=ls())
 	fut.indir_1 <- <F.INDIR>
 	fut.time.window <- <F.TIME.WINDOW>
         fut.time.trim.mask <- <FUT.TIME.TRIM.MASK>
+#-------------- predictor directory suffix -----------#
+        pred.dir.suffix <- <PRED.DIR.SUFFIX> #use this predictor variable and this  suffix with fut.indir_1 and hist.indir_1
+d hist.indir_1
 #------------- target -------------------------# 
 	target.file.start.year_1 <- <T.FILE.START.YEAR> 
 	target.file.end.year_1 <- <T.FILE.END.YEAR> 

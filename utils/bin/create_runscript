@@ -37,6 +37,20 @@ set TAR_TWIN=$argv[22]
 set HIS_TWIN=$argv[23]
 set FUT_TWIN=$argv[24]
 set sbasedir=$argv[25]  
+set idirsuffix=$argv[26] 
+set PREDICTOR=$argv[27]
+## handle multi predictors  ##
+##########################
+set pctr=1
+set predlist = ()
+set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+while($cmd != '')
+set predlist = ( $predlist ${cmd} )
+@ pctr = $pctr + 1
+set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+end
+## preds in c list predlist now##
+
 set rundir=$sbasedir/runscript
 mkdir -p $rundir
 
@@ -106,10 +120,14 @@ foreach i (`seq $lon_start 1 $lon_end`)
 	 echo 'mkdir -p $TMPDIR'$TARGET_DIR  >> $runpath 
  endif
  if ($HIST_PRED_DIR != 'NA/') then 
- echo 'mkdir -p $TMPDIR'$HIST_PRED_DIR  >> $runpath 
+   foreach plist ($predlist)
+ 	echo 'mkdir -p $TMPDIR'$HIST_PRED_DIR$plist$idirsuffix  >> $runpath 
+   end
  endif
  if ($FUT_PRED_DIR != 'NA/') then
- echo 'mkdir -p $TMPDIR'$FUT_PRED_DIR  >> $runpath 
+   foreach plist ($predlist)
+      echo 'mkdir -p $TMPDIR'$FUT_PRED_DIR$plist$idirsuffix  >> $runpath 
+   end	
  endif
 # if ($SPAT_MASK_DIR != 'NA/') then
 #        echo "gcp --sync -cd $SPAT_MASK_DIR/*${SPAT_REGION}.I$counter"_"$dsuffix.nc "'$TMPDIR'$SPAT_MASK_DIR/  >> $runpath
