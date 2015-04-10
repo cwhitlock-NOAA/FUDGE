@@ -30,21 +30,20 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      if(create.ds.out){
        #Should only be false if explicitly running with the intent of creating only
        #a QC mask - all other cases produce *some* ds.out
-       ds.vector =  array(NA,dim=c(dim(fut.masked.in))) #c(istart,loop.end,time.steps)
+       print(dim(target.masked.in))
+       print(dim(fut.masked.in))
+       ds.vector =  array(NA,dim=c( c(dim(target.masked.in)[1:2]),    #spatial /ens dims
+                                       dim(fut.masked.in)[4])) #time dims
+       print(paste("dimensions of downscaling output vector:", paste(dim(ds.vector), collapse=" ")))
      }else{
        ds.out <- NULL
      }
      if(create.qc.mask){
-       qc.mask <-  array(NA,dim=c(dim(fut.masked.in)))
+       qc.mask <-  ds.vector
        s5.adjust <- TRUE
      }else if(length(s5.instructions) > 0){ #s5.instructions[[1]]!='na' #!is.null(s5.instructions[[1]])
        qc.mask <- NULL
        s5.adjust <- TRUE #It's binary: you either make adjustments, or create a qc mask. It never does nothing. #FALSE
-#        for (element in 1:length(s5.instructions)){
-#          if(s5.instructions[[element]]$adjust.out=='on'){ #Changed from not-'na' to 'on'
-#            s5.adjust <- TRUE
-#          }
-#        }
      }else{
        #If s5.instructions=='na'
        qc.mask <- NULL
@@ -56,10 +55,8 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
        s3.adjust <- TRUE
      }else{
        s3.adjust <- FALSE
-     }
+     }   
      
-     
-     print(k)
      if(k>1){
        #Create Kfold cross-validation mask
        print('Cross-validation not supported at this time')
@@ -72,15 +69,16 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      #Also keep in mind: both the time windows and the kfold masks are, technically, 
      #time masks. You're just doing a compression step immediately after one but not the other.
      print(dim(target.masked.in))
-     for(i.index in 1:length(target.masked.in[,1,1])){  #Most of the time, this will be 1
-       for(j.index in 1:length(target.masked.in[1,,1])){
-         if(sum(!is.na(target.masked.in[i.index,j.index,]))!=0 &&
-              sum(!is.na(hist.masked.in[i.index,j.index,]))!=0 &&
-              sum(!is.na(fut.masked.in[i.index,j.index,]))!=0){
+     targ.dim <- dim(target.masked.in)
+     for(i.index in 1:targ.dim[1]){  #Most of the time, this will be 1
+       for(j.index in 1:targ.dim[2]){
+         if(sum(!is.na(target.masked.in[i.index,j.index,,]))!=0 &&
+              sum(!is.na(hist.masked.in[i.index,j.index,,]))!=0 &&
+              sum(!is.na(fut.masked.in[i.index,j.index,,]))!=0){
            message(paste("Begin processing point with i = ", i.index, "and j =", j.index))
-           loop.temp <- LoopByTimeWindow(train.predictor = hist.masked.in[i.index, j.index,], 
-                                         train.target = target.masked.in[i.index, j.index,], 
-                                         esd.gen = fut.masked.in[i.index, j.index,], 
+           loop.temp <- LoopByTimeWindow(train.predictor = hist.masked.in[i.index, j.index,,], 
+                                         train.target = target.masked.in[i.index, j.index,,], 
+                                         esd.gen = fut.masked.in[i.index, j.index,,], 
                                          ds.var=ds.var,
                                          mask.struct = mask.list, 
                                          create.ds.out=create.ds.out, downscale.fxn = ds.method, downscale.args = downscale.args, 
@@ -91,6 +89,8 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
                                          s5.instructions=s5.instructions, s5.adjust=s5.adjust,
                                          create.qc.mask=create.qc.mask, create.adjust.out=create.adjust.out
            )
+           #save(file="~/Code/testing/test_out.R", save='loop.temp')
+           #stop("wanted to look more")
            if (create.ds.out || create.adjust.out){
              #If we are not in the "write only the qc data" case
              ds.vector[i.index, j.index,] <- loop.temp$downscaled

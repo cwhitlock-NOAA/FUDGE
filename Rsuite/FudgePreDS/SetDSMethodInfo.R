@@ -9,6 +9,7 @@
 #' 
 
 SetDSMethodInfo <- function(ds.method){
+  message(ds.method)
   switch(ds.method, 
                 "simple.lm" = setSimpleLM(),
                 'CDFt' = setCDFt(),
@@ -25,6 +26,7 @@ SetDSMethodInfo <- function(ds.method){
          "QMAP" = setChangeFactor(),
          "DeltaSD" = setDeltaSD(),
          "EDQMv2" = setEquiDistant(),
+         'multi.lm' = setMultiLM(),
                 ReturnDownscaleError(ds.method))
   #Function returns nothing, just sets globals
 }
@@ -134,4 +136,15 @@ setDeltaSD<- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("OPT")
+}
+
+setMultiLM <- function(){
+  #Sets global variables if the DS method used is DeltaSD
+  #Is it possible to use cross-validation with this method?
+  crossval.possible <<- TRUE
+  # Does this method use some of the same data to train the 
+  # ESD equations/quantiles AND generate the downscaled data?
+  train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
+  # What are the arguments to the args() parameter that are accepted? 
+  names.of.args <<- c()
 }

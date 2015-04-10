@@ -1,5 +1,5 @@
 # Aparna Radhakrishnan 08/04/2014
-ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=FALSE, force_3_dimensions=FALSE) {
+ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=FALSE, add.ens.dim=FALSE, force_3_dimensions=FALSE) {
   #'Reads data from a variable of a netCDF file object
   #'Returns netCDF variable data and, if dim!= 'none', one or more dimensions of that
   #'netCDF object
@@ -18,12 +18,14 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   #'      as the input dataset. Returned values will be in ordinary R double precision if the netCDF 
   #'      variable type is float or double. Has a 'filename' attribute that points to the input file, 
   #'      which is used for error messages. If dim='temporal', then it also has a calendar attribute.
-  #'  $dim: The dimension(s) queried in the file, of class ncdim4. Very useful for writing to file. 
+  #'  $dim: The dimension(s) queried in the file, of class ncdim4. Very useful for writing to file; 
+  #'  as of 3-10, now REQUIRED for writing to file. 
   #'  $vars: The variables *not* the variable of interest that use the dimensions queried 
   #'      (i.e. lat_bnds, j_offset, height).
-  #'  $cfname: The CF-standard name of the variable. Only applies to tasmax, tasmin and pr.
-  #'  $long_name: The long name of the variable. Derived from the long_name attribute of the netCDF object.
-  #'  $units: The units of the variable of interest. Derived from the units attribute of the netCDF object.
+  #'  $cfname: The CF-standard name of the variable. Only applies to tasmax, tasmin and pr; for all other
+  #'  vars, the short name is the cfname
+  #'  $long_name: The long name of the variable. Derived from the long_name vale of the netCDF object.
+  #'  $units: The units of the variable of interest. Derived from the units value of the netCDF object.
   #'
   #'@include ncdf4, ncdf4.helpers
 
@@ -31,26 +33,34 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   if((is.na(dstart)) && (is.na(dcount)) && (is.na(var.name))) {
   clim.in <- ncvar_get(nc.object)            
   }else {
-    message('obtaining variable slice')
+    if(verbose){ message('obtaining variable slice') }
   clim.in <- ncvar_get(nc.object,var.name,dstart,dcount,collapse_degen=FALSE) 
-    message('vars obtained')
+    if(verbose) { message('vars obtained') }
   }
     #Fudge currently deals badly with input vectors of more than three dimensions - and the first two
     #have to be spatial. This will collapse any OTHER degenerate dimensions present.
     #In the future, this will NOT apply to ensemble dimensions, but we are not there yet by any means.
-    if(length(dim(clim.in)) > 3 && force_3_dimensions){
-      message("Adjusting dimensions to fit the FUDGE framework")
-      #Last dim is always time, first two should always be X and Y
-      dim.adjust <- dim(clim.in)[2:length(dim(clim.in))-1]
-      if(sum(dim.adjust!=1)!=0){ 
-        #If there are any non-degenerate dimensions, throw an error
-        #NOTE: This is not meant to be used with ensemble dims - not yet, anyway
-        stop(paste("Error in ReadNC: The file", attr(nc.object, "filename"), "had a var that could not be adjusted to an x,y,t dimension system", 
-                   "due to one or more non-degenerate dimensions. Please examine the input file and try again."))
-      }else{
-        #Redimension as (x,y,t)
-        dim(clim.in) <- c(dim(clim.in[1:2]), dim(clim.in)[length(clim.in)])
+    if(length(dim(clim.in)) > 3){
+      if( force_3_dimensions){
+        if(verbose) { message("Adjusting dimensions to fit the FUDGE framework") }
+        #Last dim is always time, first two should always be X and Y
+        dim.adjust <- dim(clim.in)[2:length(dim(clim.in))-1]
+        if(sum(dim.adjust!=1)!=0){ 
+          #If there are any non-degenerate dimensions, throw an error
+          #NOTE: This is not meant to be used with ensemble dims - not yet, anyway
+          stop(paste("Error in ReadNC: The file", attr(nc.object, "filename"), "had a var that could not be adjusted to an x,y,t dimension system", 
+                     "due to one or more non-degenerate dimensions. Please examine the input file and try again."))
+        }else{
+          #Redimension as (x,y,t)
+          dim(clim.in) <- c(dim(clim.in[1:2]), dim(clim.in)[length(clim.in)])
+        }
       }
+    }else if(add.ens.dim){
+      print("adding ensemble dimension")
+      print(paste("dim before adjust:", paste(dim(clim.in), collapse=" ")))
+      dim.adjust <- c(dim(clim.in)[1:2], 1, dim(clim.in)[3])
+      dim(clim.in) <- dim.adjust
+      print(paste("dim after adjust:", paste(dim(clim.in), collapse=" ")))
     }
   #### get standard name,long name, units if present ####
   attname = 'standard_name'
@@ -60,21 +70,26 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   attname <- 'units' 
   units <- ncatt_get(nc.object, var.name, attname)
     attr(clim.in, "units") <- units
+  prec <- nc.object$var[[var.name]]$prec
+    if(is.null(prec)){
+      #set prec to float if not present in input file
+      prec <- 'float'
+    }
+    attr(clim.in, "prec") <- prec
   ###Test code for determining what happens for unitless vars
   #######################################################
   #Control getting the dimensions and other variables in the output file
   dim.list <- list(dim=list(), vars=list())
   for(d in 1:length(dim)){
     temp.list <- switch(dim[d], 
-                        "spatial"=get.space.vars(nc.object, var.name), 
-                        "temporal"=get.time.vars(nc.object, var.name), 
-                        "ensemble" = get.ens.dim(nc.object, var.name),
+                        "spatial"=get.space.vars(nc.object, var.name, verbose=verbose), 
+                        "temporal"=get.time.vars(nc.object, var.name, verbose=verbose), 
+                        "ensemble" = get.ens.dim(nc.object, var.name, verbose=verbose),
                         #If other arg or "nothing", do nothing
                         list("dim"=list("none"), 'vars'=list("none"))
                         )
     dim.list$dim <- c(dim.list$dim, temp.list$dim)
     dim.list$vars <- c(dim.list$vars, temp.list$vars)
-    print(names(dim.list$dim))
   }
   #######################################################
   listout <- list("clim.in"=clim.in,"cfname"=cfname,"long_name"=long_name,"units"=units, 
@@ -87,17 +102,17 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   return(listout)
 }
 
-get.space.vars <- function(nc.object, var){
+get.space.vars <- function(nc.object, var, verbose=FALSE){
   #Obtains spatial vars, grid specs and all vars not the main var of interest
   #that depend upon those vars
   #Axes with spatial information
-  message('getting spatial vars')
+  if(verbose) { message('getting spatial vars') }
   axes <- c("X", "Y", "Z")
   file.axes <- nc.get.dim.axes(nc.object, var)
   if(is.null(file.axes)){
     stop(paste("Error in ReadNC: File", nc.object$filename, "has no variable", var, "; please examine your inputs."))
   }else{
-    print("Obtaining axis", )
+    if(verbose) { print("Obtaining axis", ) }
     spat.axes <- file.axes[file.axes%in%axes] #Here is where the extra Z dim check comes in
     spat.varnames <- names(file.axes[file.axes%in%axes])
   }
@@ -108,7 +123,8 @@ get.space.vars <- function(nc.object, var){
     dim <- spat.varnames[[sd]]
     spat.dims[[dim]] <- nc.get.dim.for.axis(nc.object, var, ax)
     #Make sure that original file is being included, in order to support attribute cloning
-    attr(spat.dims[[dim]], "filename") <- attr(nc.object, "filename")
+    if(verbose) { print(paste("writing filename attribute", nc.object$filename)) }
+    attr(spat.dims[[dim]], "filename") <- nc.object$filename
   }
   #Obtain any dimensions that are not time
   #Obtain any variables that do not reference time
@@ -121,10 +137,12 @@ get.space.vars <- function(nc.object, var){
       spat.vars[[var.loop]] <- ncvar_get(nc.object, var.loop, collapse_degen=FALSE)
       #Grab the bits used to build the vars later
       att.vector <- c(nc.object$var[[var.loop]]$units, nc.object$var[[var.loop]]$longname, 
-                      #nc.object$var[[var.loop]]$missval, 
+                      nc.object$var[[var.loop]]$missval, 
                       nc.object$var[[var.loop]]$prec)
-      att.vector[4] <- paste(names(nc.object$dim)[(nc.object$var[[var.loop]]$dimids)+1], collapse=",") #formerly 5
-      names(att.vector) <- c("units", "longname", "prec", "dimids") #"missval", 
+      att.vector[5] <- paste(names(nc.object$dim)[(nc.object$var[[var.loop]]$dimids)+1], collapse=",") #previously 5, with missval
+      #att.vector[6] <- 'spatial'
+      names(att.vector) <- c("units", "longname", "missval", 
+                             "prec", "dimids") #"var_type"
       att.vector[att.vector=='int'] <- "integer"
       for (a in 1:length(att.vector)){
         attr(spat.vars[[var.loop]], which=names(att.vector)[[a]]) <- att.vector[[a]]
@@ -136,14 +154,16 @@ get.space.vars <- function(nc.object, var){
         attr(spat.vars[[var.loop]], which='comments') <- comments$value
       }
     }
+    #3-20: does this fix the att copying issue?
+    #attr(spat.vars[[var.loop]], 'filename') <- nc.object$filename
   }
   return(list("dim"=spat.dims, "vars"=spat.vars))
 }
 
-get.time.vars <- function(nc.object, var){
+get.time.vars <- function(nc.object, var, verbose=FALSE){
   #Obtains time vars, calendar attributes and all vars that depend on time
   #that are not the main var of interest
-  message('getting time vars')
+  if(verbose) { message('getting time vars') }
   axes<- c("T")
   file.axes <- nc.get.dim.axes(nc.object, var)
   if(is.null(file.axes)){
@@ -159,7 +179,7 @@ get.time.vars <- function(nc.object, var){
     dim <- time.varnames[[td]]
     time.dims[[dim]] <- nc.get.dim.for.axis(nc.object, var, ax)
     #Make sure that original file is being included, in order to support attribute cloning
-    attr(time.dims[[dim]], "filename") <- attr(nc.object, "filename")
+    attr(time.dims[[dim]], "filename") <- nc.object$filename
   }
   #Obtain any dimensions that are not time
   #Obtain any variables that do not reference time
@@ -174,14 +194,18 @@ get.time.vars <- function(nc.object, var){
         time.vars[[var.loop]] <- ncvar_get(nc.object, var.loop, collapse_degen=FALSE)
         #Grab bits needed to construct vars later; store as attributes
         att.vector <- c(nc.object$var[[var.loop]]$units, nc.object$var[[var.loop]]$longname, 
-                        #nc.object$var[[var.loop]]$missval, 
+                        nc.object$var[[var.loop]]$missval, 
                         nc.object$var[[var.loop]]$prec)
-        att.vector[4] <- paste(names(nc.object$dim)[(nc.object$var[[var.loop]]$dimids)+1], collapse=",") #formerly 
-        names(att.vector) <- c("units", "longname", "prec", "dimids") #"missval", 
+        att.vector[5] <- paste(names(nc.object$dim)[(nc.object$var[[var.loop]]$dimids)+1], collapse=",") #previously 5 with missval
+        #Added for indexing spatial and temporal vars for writing
+        #att.vector[6] <- 'temporal'
+        names(att.vector) <- c("units", "longname", "missval", 
+                               "prec", "dimids")
         att.vector[att.vector=='int'] <- "integer"
         for (a in 1:length(att.vector)){
           attr(time.vars[[var.loop]], which=names(att.vector)[[a]]) <- att.vector[[a]]
         }
+        #Grab the missing value if and only if the 
         #And finally, grab the comments attribute, which is important
         #for i and j offsets (but not much else)
         comments <- ncatt_get(nc.object, var.loop, 'comments')
@@ -189,9 +213,11 @@ get.time.vars <- function(nc.object, var){
           attr(time.vars[[var.loop]], which='comments') <- comments$value
         }
       }
+      #3-20: does this fix the att copying issue?
+      #attr(time.vars[[var.loop]], 'filename') <- nc.object$filename
     }
   }else{
-    message("No variables but the main variable found using time dimension; continue on.")
+    if(verbose) { message("No variables but the main variable found using time dimension; continue on.") }
     time.dims[[dim]]
   }
   return(list("dim"=time.dims, "vars"=time.vars))
@@ -203,16 +229,14 @@ obtain.ncvar.dimnames <- function(nc.obj){
   return(nc.obj[['name']])
 }
 
-get.ens.dim <- function(nc.obj, var.name){
-  message('getting ensemble dimension, if present')
+get.ens.dim <- function(nc.obj, var.name, verbose=FALSE){
+  if(verbose) { message('getting ensemble dimension, if present') }
   ens.dim.name <- "ensmem"
   if(ens.dim.name%in%names(nc.obj$dim)){
-    print("ensmem present")
     ensmem=nc.obj$dim$ensmem
     attr(ensmem, "filename") <- attr(nc.obj, "filename")
     return(list(dim=list(ensmem=ensmem), vars=list()))
   }else{
-    print("no dim named ensmem present")
     return(list(dim=list(), vars=list()))
   }
 }

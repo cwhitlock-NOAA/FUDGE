@@ -14,22 +14,35 @@ set pctr=1
 set predlist = ()
 set predlist1= ()
 set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
-while($cmd != '')
-set predlist = ( $predlist "'"${cmd}"'" )
-if ($pctr > 1) then
-set predlist1 = ( $predlist1",'"${cmd}"'")
-else
-set predlist1 = ( $predlist1"'"${cmd}"'")
-endif
-@ pctr = $pctr + 1
-set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
-end
+#CEW edit to determine iteration and add indents (count)
+#CEW edit to add grep-based bypass for testing
+set list_present = `echo $PREDICTOR | grep ","`
+echo $list_present
+if($list_present != "") then 
+  set count=1
+  while($cmd != '')
+    @ count=$count + 1
+    echo $count
+    set predlist = ( $predlist "'"${cmd}"'" )
+    if ($pctr > 1) then
+      set predlist1 = ( $predlist1",'"${cmd}"'")
+    else
+      set predlist1 = ( $predlist1"'"${cmd}"'")
+    endif
+    @ pctr = $pctr + 1
+    set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
 ## preds in c list predlist now##
 ##end handle multiple predictors
-echo "predlist $predlist1"
-set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"list("${predlist1}")" )
-echo $TEMPLATE_LIST
-echo "DEbug1"
+  echo "predlist $predlist1"
+  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"list("${predlist1}")" )
+  echo $TEMPLATE_LIST
+  echo "DEbug1"
+
+#CEW edit
+else
+  set TEMPLATE_LIST = ( $TEMPLATE_LIST "PREDICTOR":"'"${PREDICTOR}"'" )
+endif
+###End CEW testing edit
 
 set TARGET = $argv[2]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "TARGET":"'"${TARGET}"'" )

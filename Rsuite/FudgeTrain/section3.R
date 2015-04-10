@@ -46,8 +46,6 @@ callS3Adjustment<-function(s3.instructions=list('na'),
     #The transforms may have elements that will depend on the conditions of the initial transform, 
     #and the order of the backtransform is going to be dependant on the order of the elements
     #that go into it. 
-    #TODO: ask Carlos about transform behavior. They seem as if they should operate in the same loop as
-    #the 
     adjusted.list <- switch(test$type,
                               'PR' = return(callPRPreproc(test, adjusted.list$input, adjusted.list$s5.list)),
                               stop(paste('Adjustment Method Error: method', test$s5.method, 
@@ -75,7 +73,6 @@ callPRPreproc <- function(test, input, postproc.output){
                pre-processing function."))
   }
   if('apply_0_mask'%in%pr.names){
-    #apply.0.mask = TRUE
     apply.0.mask = (test$pp.args$apply_0_mask=='on')
   }else{
     message("Assuming that an old XML is being used; default behavior in place")

@@ -41,6 +41,7 @@ CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=N
 #                 "EDQM_DF" = callEDQMv2(train.target, train.predict, esd.gen, args),
                 "DeltaSD" = callDeltaSD(train.target, train.predict, esd.gen, args), #, ds.var)
                 "QMAP" = QMAP(train.target, train.predict, esd.gen, args),
+                "multi.lm"=callMulti.lm(train.predict, train.target, esd.gen, args),
                 ReturnDownscaleError(ds.method))
   #print(paste("stop time:", date()))
   return(out)  
@@ -69,55 +70,81 @@ callSimple.lm <- function(pred, targ, new, args){
   return(trained.function(new))
 }
 
-callMulti.lm <- function(pred, targ, new, args, ds.lengths){
-  #Creates a simple linear model without a cross-validation step. 
-  #Mostly used to check that the procedure is working
-  #esdgen.lengths <- length(new[[seq(1:length(new))]][[1]])
-  
-  #Initialize output structure
-  print("inside ds fxn")
-  output <- list()
-  print("looping on new")
-  print(ds.lengths)
-  print(mode(ds.lengths))
-  for(el in 1:length(new)){
-    print(el)
-    print(ds.lengths[[el]])
-    new.list <- rep(NA, ds.lengths[[el]])
-    output[[names(new)[el]]] <- new.list
-    print("assignment")
-    print(length(output[[el]]))
-    print(paste("lenght of output:", length(output)))
+callMulti.lm <- function(pred, targ, new, args=NA){
+  ##Current assumption is data in var,t order coming in, 
+  ##and that getst transposed later
+  #Okay, so what happens first?
+  test.prod <- as.data.frame(cbind(targ,t(pred)))
+  lm.model <- lm(data=test.prod)
+  lm.fxn <- function(coefs, new.data, args=NA){
+    #Short lm function - takes a length of coefficents
+    #equal to the number of vars present, 
+    #and the predictor with dim of var, timelevels
+    #outputtting a single vec of length timelevels
+    coef.len <- length(coefs)
+    coef.vec <- mapply(prod, new.data, coefs[2:coef.len])
+    dim(coef.vec) <- dim(new.data) #Beforehand, put in var, time order
+    out <- coefs[1] + apply(coef.vec, 2, sum) #apply accros vars
+    return(out)
   }
-  
-  #First, get matrix of predictor values to use for prediction
-  pred.mat <- matrix(unlist(pred, use.names=FALSE), ncol=length(pred), byrow=FALSE)
-  print("dimensions of predictor matrix")
-  print(dim(pred.mat))
-  print(length(unlist(targ)))
-  lm.coef <- coef(lm(unlist(targ) ~ pred.mat))
-  
-  for (i in 1:length(new)){ #new is organized first by RIP, then component
-    new.name <- names(new)[i]
-    #initialize ouput vector
-    #out.vec <- rep(NA, length(new$rip[1]))
-    new.mat <- matrix(unlist(new[i], use.names=FALSE), ncol=length(pred), byrow=FALSE)
-    #Note that this assumes that the order of the points/vars
-    #is the same for the predictor as the esd.gen datasets
-    #Multiply over all the columns
-    no.intercept <- sweep(x=new.mat, MARGIN=2, lm.coef[2:length(lm.coef)], "*")
-    #Replace any NA values with 0 for the addition step
-    no.intercept[is.na(no.intercept)] <- 0
-    no.intercept <- apply(X=no.intercept, MARGIN=1, "sum")
-    outvec <- no.intercept + lm.coef[1]
-    print(mode(outvec))
-    print(summary(outvec))
-    output[new.name] <- list(outvec)
-    print(summary(output))
-  }
-  print(summary(output))
-  return(output)
+  return(lm.fxn(coef(lm.model), new))
 }
+
+# callMulti.lm <- function(pred, targ, new, args, ds.lengths){
+#   #Creates a simple linear model without a cross-validation step. 
+#   #Mostly used to check that the procedure is working
+#   #esdgen.lengths <- length(new[[seq(1:length(new))]][[1]])
+#   
+#   #'@return A single vector of predictor data of the same
+#   #'length as the time dimension of new
+#   #'
+#   
+#     
+#   
+#   #Initialize output structure
+#   print("inside ds fxn")
+#   output <- list()
+#   print("looping on new")
+#   print(ds.lengths)
+#   print(mode(ds.lengths))
+#   for(el in 1:length(new)){
+#     print(el)
+#     print(ds.lengths[[el]])
+#     new.list <- rep(NA, ds.lengths[[el]])
+#     output[[names(new)[el]]] <- new.list
+#     print("assignment")
+#     print(length(output[[el]]))
+#     print(paste("lenght of output:", length(output)))
+#   }
+#   
+#   #First, get matrix of predictor values to use for prediction
+#   pred.mat <- matrix(unlist(pred, use.names=FALSE), ncol=length(pred), byrow=FALSE)
+#   print("dimensions of predictor matrix")
+#   print(dim(pred.mat))
+#   print(length(unlist(targ)))
+#   lm.coef <- coef(lm(unlist(targ) ~ pred.mat))
+#   
+#   for (i in 1:length(new)){ #new is organized first by RIP, then component
+#     new.name <- names(new)[i]
+#     #initialize ouput vector
+#     #out.vec <- rep(NA, length(new$rip[1]))
+#     new.mat <- matrix(unlist(new[i], use.names=FALSE), ncol=length(pred), byrow=FALSE)
+#     #Note that this assumes that the order of the points/vars
+#     #is the same for the predictor as the esd.gen datasets
+#     #Multiply over all the columns
+#     no.intercept <- sweep(x=new.mat, MARGIN=2, lm.coef[2:length(lm.coef)], "*")
+#     #Replace any NA values with 0 for the addition step
+#     no.intercept[is.na(no.intercept)] <- 0
+#     no.intercept <- apply(X=no.intercept, MARGIN=1, "sum")
+#     outvec <- no.intercept + lm.coef[1]
+#     print(mode(outvec))
+#     print(summary(outvec))
+#     output[new.name] <- list(outvec)
+#     print(summary(output))
+#   }
+#   print(summary(output))
+#   return(output)
+# }
 
 callCDFt <- function (pred, targ, new, args){
   #Calls the CDFt function

@@ -44,12 +44,19 @@ set PREDICTOR=$argv[27]
 set pctr=1
 set predlist = ()
 set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+#CEW edit to add grep-based bypass for testing
+set list_present = `echo $PREDICTOR | grep ","`
+echo $list_present
+if($list_present != "") then 
 while($cmd != '')
 set predlist = ( $predlist ${cmd} )
 @ pctr = $pctr + 1
 set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
 end
 ## preds in c list predlist now##
+else
+set predlist = ($PREDICTOR)
+###End CEW edit
 
 set rundir=$sbasedir/runscript
 mkdir -p $rundir
