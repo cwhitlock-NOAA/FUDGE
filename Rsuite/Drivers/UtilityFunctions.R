@@ -108,10 +108,10 @@ apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
   }
   
   if(verbose){(print(paste("dimensions of data:", paste(data.dim, collapse=" "))))}
+  if(verbose){print('summary of data'); print(summary(as.vector(data)))}
   
   if(!is.na(dim.apply)){
     if(dim.apply=='time' || dim.apply=='temporal'){
-      #       print(mask.dim)
       length.time <- data.dim[length(data.dim)]
       if(length.time!=mask.dim){
         stop("mask dim error; try again")
@@ -119,10 +119,8 @@ apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
         if(length(data.dim) > 1){
           #There is more than one dimension present
           #         print( c(length(data.dim), 1:(length(data.dim)-1)))
-          data.perm <- aperm(data, c(length(data.dim), 1:(length(data.dim)-1)))
-          result <- data.perm*mask.dim #t,x,y order(yay vector recycling)
-          #         print(dim(result))
-          #         print(c(2:(length(data.dim)), 1))
+          data.perm <- aperm(data, c(length(data.dim), 1:(length(data.dim)-1)))#t,x,y order
+          result <- rep(mask, length.out=length(data.perm))*data.perm #t,x,y order(yay vector recycling)
           result <- aperm(result, c(2:(length(data.dim)), 1))
           ##Let's see...removing missing values might get complicated
           if(na.rm){
@@ -135,14 +133,13 @@ apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
           }
         }else{
           #Assume that the only dimension is time
-          result <- data*mask.dim
+          result <- data*mask
         }
+        if(verbose){print('summary of data'); print(summary(as.vector(result)))}
         
       }
     }else if(dim.apply=='spatial'){
       dim.spatial <- mask.dim
-      print(dim.spatial)
-      print(data.dim[1:2])
       if(sum(mask.dim==data.dim[1:2])!=2){
         stop("mask dim error; try again")
       }else{

@@ -36,9 +36,6 @@ CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=N
                 "BCQM" = callBCQMv2(train.target, train.predict, esd.gen, args), 
                 "EDQM" = callEDQMv2(train.target, train.predict, esd.gen, args), 
                 "CFQM" = callCFQMv2(train.target, train.predict, esd.gen, args), 
-#                 "CFQM_DF" = callCFQMv2(train.target, train.predict, esd.gen, args),
-#                 "BCQM_DF" = callBCQMv2(train.target, train.predict, esd.gen, args),
-#                 "EDQM_DF" = callEDQMv2(train.target, train.predict, esd.gen, args),
                 "DeltaSD" = callDeltaSD(train.target, train.predict, esd.gen, args), #, ds.var)
                 "QMAP" = QMAP(train.target, train.predict, esd.gen, args),
                 "multi.lm"=callMulti.lm(train.predict, train.target, esd.gen, args),
@@ -87,6 +84,9 @@ callMulti.lm <- function(pred, targ, new, args=NA){
     out <- coefs[1] + apply(coef.vec, 2, sum) #apply accros vars
     return(out)
   }
+#  temp.out <- lm.fxn(coef(lm.model), new)
+#   save(file="~/Code/testing/test_out.R", list=c('temp.out', 'lm.model', 'pred', 'targ', 'new'))
+#   stop('examine current results and figure out what they are coming from')
   return(lm.fxn(coef(lm.model), new))
 }
 

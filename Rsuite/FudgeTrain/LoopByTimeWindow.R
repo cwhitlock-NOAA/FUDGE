@@ -107,9 +107,13 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
   
   for (window in 1:num.masks){
     if(mask.data.by.time.window){
-      window.predict <- apply.any.mask(data=train.predictor, mask=mask.struct[[1]]$masks[[window]], dim.apply='temporal') #verbose=TRUE
-      window.target  <- apply.any.mask(data=train.target,    mask=mask.struct[[2]]$masks[[window]], dim.apply='temporal')
-      window.gen     <- apply.any.mask(data=esd.gen,         mask=mask.struct[[3]]$masks[[window]], dim.apply='temporal')
+      #This should not produce any errors - at present, the only dataset that shoudl have missvals that are *not*
+      #due to a mask would be the observational dataset, and that dtaaset should not have to deal with the awkward pooling of the 
+      window.predict <- apply.any.mask(data=train.predictor, mask=mask.struct[[1]]$masks[[window]], dim.apply='temporal', na.rm=TRUE) #verbose=TRUE
+      window.target  <- apply.any.mask(data=train.target,    mask=mask.struct[[2]]$masks[[window]], dim.apply='temporal', na.rm=TRUE)
+      window.gen     <- apply.any.mask(data=esd.gen,         mask=mask.struct[[3]]$masks[[window]], dim.apply='temporal', na.rm=TRUE)
+#       save(file="~/Code/testing/test_out.R", list=c('train.target', 'window.target', 'mask.struct'))
+#       stop("look at this in more detail")
 #       window.predict <- ApplyTemporalMask(train.predictor, mask.struct[[1]]$masks[[window]])
 #       window.target <- ApplyTemporalMask(train.target, mask.struct[[2]]$masks[[window]])
 #       window.gen <- ApplyTemporalMask(esd.gen, mask.struct[[3]]$masks[[window]])
@@ -131,9 +135,9 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
 #         kfold.predict <- ApplyTemporalMask(window.predict, kfold.masks[[1]]$masks[[kmask]])
 #         kfold.target <- ApplyTemporalMask(window.target, kfold.masks[[2]]$masks[[kmask]])
 #         kfold.gen <- ApplyTemporalMask(window.gen, kfold.masks[[3]]$masks[[kmask]])
-        kfold.predict <- apply.any.mask(data=window.predict, mask=mask.struct[[1]]$masks[[kmask]], dim.apply='temporal')
-        kfold.target  <- apply.any.mask(data=window.target,  mask=mask.struct[[2]]$masks[[kmask]], dim.apply='temporal')
-        kfold.gen     <- apply.any.mask(data=window.gen,     mask=mask.struct[[3]]$masks[[kmask]], dim.apply='temporal')
+        kfold.predict <- apply.any.mask(data=window.predict, mask=mask.struct[[1]]$masks[[kmask]], dim.apply='temporal', na.rm=TRUE)
+        kfold.target  <- apply.any.mask(data=window.target,  mask=mask.struct[[2]]$masks[[kmask]], dim.apply='temporal', na.rm=TRUE)
+        kfold.gen     <- apply.any.mask(data=window.gen,     mask=mask.struct[[3]]$masks[[kmask]], dim.apply='temporal', na.rm=TRUE)
         if(!is.null(ds.orig)){
           kfold.orig <- ApplyTemporalMask(window.orig, kfold.masks[[3]]$masks[[kmask]])
         }else{
@@ -187,15 +191,14 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
                                    args=downscale.args, 
                                    ds.var=ds.var)
           #Assign downscaled output to vector
-#           if(use.time.trim.mask){
-#             #downscale.vec[!is.na(kfold.timemask)] <- temp.out[!is.na(kfold.timemask)]
-#           }else{
-#             downscale.vec[!is.na(kfold.gen)] <- temp.out
-#           }
-#           print(paste("length of temp.out:", length(temp.out)))
-#           print(paste("length of downscale.vec:", length(downscale.vec)))
-          downscale.vec <- mapply(FUN=add.over.missvals, downscale.vec, temp.out) #Note: This assumes that temp.out is as long as downscale.vec
-#           print(length(downscale.vec))
+          if(use.time.trim.mask){
+            #downscale.vec[!is.na(kfold.timemask)] <- temp.out[!is.na(kfold.timemask)]
+            downscale.vec[!is.na(kfold.timemask)] <- temp.out[!is.na(temp.out)]
+          }else{
+            downscale.vec[!is.na(mask.struct[[3]]$masks[[window]])] <- temp.out[!is.na(temp.out)]
+          }
+
+          #downscale.vec <- mapply(FUN=add.over.missvals, downscale.vec, temp.out) #Note: This assumes that temp.out is as long as downscale.vec
           #downscale.vec <- temp.out
         }
         #And adjust the downscaled output, if applicable
@@ -225,9 +228,10 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
           #If there is a time-trimming mask, use it here
           #Assign downscaled output to vector
           if(use.time.trim.mask){
-            downscale.vec[!is.na(kfold.timemask)] <- temp.out$ds.out[!is.na(kfold.timemask)]
+            #downscale.vec[!is.na(kfold.timemask)] <- temp.out[!is.na(kfold.timemask)]
+            downscale.vec[!is.na(kfold.timemask)] <- temp.out[!is.na(temp.out)]
           }else{
-            downscale.vec[!is.na(kfold.gen)] <- temp.out$ds.out
+            downscale.vec[!is.na(mask.struct[[3]]$masks[[window]])] <- temp.out[!is.na(temp.out)]
           }
         }
 

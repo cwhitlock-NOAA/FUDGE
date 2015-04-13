@@ -1,8 +1,13 @@
 # Aparna Radhakrishnan 08/04/2014
-WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missval=1.e20,
-                     time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
-                     start.year="undefined",units ,calendar='irrelevant',lname=var.name,cfname=var.name, 
-                     bounds=FALSE, bnds.list=NA, var.data=NA) {
+WriteNC <-  function(filename,data.array,var.name,
+                     #xlon,ylat,time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
+                     dim.list,
+                     prec='double', missval=1.e20,
+                     #time.index.start=NA, time.index.end=NA, downscale.tseries=NA, downscale.origin=NA,
+                     start.year="undefined",units,calendar='irrelevant',lname=var.name,cfname=var.name, 
+                     bounds=FALSE, bnds.list=NA, var.data=NA, 
+                     writelist=FALSE, modulo=NA, 
+                     verbose=FALSE) {
   #'Creates file filename (netCDF type) with the variable  var.name along with the 
   #'coordinate variables in the netCDF file, CF standard name, long names.
   #'
@@ -23,18 +28,17 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
   #'time windowing mask file specified as the future predictor, and all 
   #'space-related coordinates are obtained from the spatial mask specified
   #'for the region.
-  #'@param xlon, ylat : The longitude and latitude dimensions of the
-  #'input data, cloned in their entiretly from the target netCDF file
-  #'  --Used to get time data directly from the time masks:
-  #'@param downscale.tseries: The entire time dimension of the input future predictor
-  #'or esd.gen dataset, cloned from the input file. 
-  #'@param downscale.origin: The origin from which downscale.tseries is calculated,
-  #'in 'days since..." format. 
-  #'@param calendar: The calendar of the timeseries.
-  #' --Used to construct time data from the inputs
-  #'@param start.year: Altername method for determining the origin 
-  #'@param time.index.start: first time index from which to count. Defaults to 0.
-  #'@param time.index.end: time index to count to. Defaults to 1. 
+  #'@param dim.list: A list of netCDF dimensions cloned from input files, 
+  #'in something close to (x,y,...t) order. Bounds is *not* included
+  #'since it has no relevance for the calculations in the main FUDGE
+  #'code; the list of dimsnions (and their names) is also used
+  #'to clone attributes from the original NetCDf files for the dimsensions, 
+  #'such as pressure. The list is also used to determine the dimensionality
+  #'of the data to be written to file, if one or more degnerate dimensions
+  #'were removed during reading in or manipulating the data. 
+  #'Note that this means the parameters xlon, ylat, downscale.tseries, 
+  #'downscale.origin and calendar are now depracated and should not
+  #'be passed to the FUDGE code.
   #'--Used to create the bounds variables and offsets 
   #'--(neccesary if to be looked at in Ferret)
   #'@param bounds=FALSE: Whether or not to attempt consruction of bounds parameters. 
@@ -49,69 +53,111 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
     FUDGEROOT = Sys.getenv(c("FUDGEROOT"))
     
     #' If CFNAME undefined in the call, pull information from CF.R. Use default otherwise. 
-    print(cfname)
-    if(cfname == var.name){
-      ###CEW comment: should be sourced from calls in driver script
-      #    source(paste(FUDGEROOT,"Rsuite/FudgeIO/src/","CF.R",sep=""))
-      cflist <- GetCFName(var.name)
-      if(is.list(cflist)){     ###CEW: Changed because was throwing a warning when cflist != "none"
-        cfname <- cflist$cfname
-        lname <- cflist$cflongname
-        print(paste("cfname:",cfname,sep=''))
-      }else{
-        print("CF.R does not contain this variable. Using default values")
+    #' #...you know what? Just stop passing in CFname for the calculated stats
+    #print(cfname)
+    if(length(cfname)==1){
+      if(cfname == var.name){
+        cflist <- GetCFName(var.name)
+        if(is.list(cflist)){     ###CEW: Changed because was throwing a warning when cflist != "none"
+          cfname <- cflist$cfname
+          lname <- cflist$cflongname
+          #print(paste("cfname:",cfname,sep=''))
+        }else{
+          print("CF.R does not contain this variable. Using default values")
+        }
       }
     }
     
     #Define variable list and populate it
-    var.dat <- list()    
-    #Write the variable containing downscaled data
-    if(exists("xlon") & (xlon[1] != '')){
-      var.dat[[var.name]] <- ncvar_def(var.name,units,list(xlon,ylat,downscale.tseries),missval=missval,longname=lname,prec=prec)#x,y,t1
-    }else{
-      var.dat[[var.name]] <- ncvar_def(var.name,units,list(ylat, downscale.tseries),missval=missval,longname=lname,prec=prec, verbose=TRUE)
+    var.dat <- list()
+    
+    #Changed 3-10 to support writing ensemble dimensions
+    true.dim <- unlist((lapply(dim.list, "[[", "len")))
+    
+    if(!writelist){
+      if(prod(true.dim)==prod(dim(data.array))){
+        #If the only difference between the dims stored from the input files
+        #and the dimensions of the data array are degenerate dimensions
+        dim(data.array) <- true.dim
+      }else{
+        message(paste("Warning in WriteNC: the data in data.array has dimensions of", 
+                      paste(dim(data.array), collapse=" "), 
+                      "but the dimensions provided for writing are of the form", 
+                      paste(true.dim, collapse=" "), "; all data may not be written to file."))
+      }
+      var.dat[[var.name]] <- ncvar_def(var.name,units=units,dim.list,missval=missval,longname=lname,prec=prec)#x,y,t1
+    }else{ #If data.array *is* a list, assume that it contains several entries with names
+      #This is going to have a neat effect on the variable name - add it only if you are 
+      for (loop in 1:length(data.array)){
+        if(prod(true.dim)==prod(dim(data.array[[loop]]))){
+          #If the only difference between the dims stored from the input files
+          #and the dimensions of the data array are degenerate dimensions
+          dim(data.array[[loop]]) <- true.dim
+        }else{
+          message(paste("Warning in WriteNC: the data in data.array of", loop, "has dimensions of", 
+                        paste(dim(data.array), collapse=" "), 
+                        "but the dimensions provided for writing are of the form", 
+                        paste(true.dim, collapse=" "), "; all data may not be written to file."))
+        }
+        if(verbose) { message(paste("defining var", var.name[[loop]])) }
+        var.dat[[var.name[loop]]] <- ncvar_def(var.name[loop],
+                                         units=units[loop],
+                                         dim.list,
+                                         missval=missval,
+                                         longname=lname[loop],
+                                         prec=prec)#x,y,t1
+      }
     }
+       
     #1-5 alternate structure
-    bnds <- ncdim_def("bnds", "", c(1,2))
+    bnds <- ncdim_def(name="bnds", longname = 'bounds', units='', vals=seq(1:2), create_dimvar=FALSE)
+    
     for (v in 1:length(var.data)){
       var <- names(var.data)[v]
-      message(paste("defining var", var))
+      if(verbose) { message(paste("defining var", var)) }
       var.dim <- unlist(strsplit(attr(var.data[[v]], "dimids"), ","))
       var.dimlist <- list()
-      #if(is.null(var.dim)){
       if(var.dim[1]=='NA'){
         var.dimlist <- NULL
       }else{
         for(d in 1:length(var.dim)){
-          print(d)
-          print(var.dim[[d]]) #Blame R's need to return all functions as elements of a list.
+          #print(var.dim[[d]]) #Blame R's need to return all functions as elements of a list.
           var.dimlist[[d]] <- switch(as.character(var.dim[d]), 
                                      "bnds"=bnds, 
-                                     "lon"=xlon, 
-                                     "lat"=ylat, 
-                                     "time"=downscale.tseries) #There should probably be an error here, but not sure what it would be
+                                     dim.list[[as.character(var.dim[d])]])
         }
       }
-      print("printing var units")
-      print(attr(var.data[[var]], "units"))
       var.dat[[var]] <- ncvar_def(var, #var.data[[v]], #Don't forget to add the data in somewhere 
                                   units=attr(var.data[[var]], "units"), #Add check for adding units back in if not present
                                   #units="",
                                   dim=var.dimlist, 
                                   #missval=as.numeric(attr(var.data[[var]], "missval") ), #Add check for this as well. 
                                   longname = attr(var.data[[var]], "longname"), 
-                                  prec = attr(var.data[[var]], "prec") #This oen gave me hives last time.
+                                  prec = attr(var.data[[var]], "prec") #This one gave me hives last time.
                                   )
     }
-    print(length(var.dat))
     #save('var.dat', file="/home/cew/Code/testing/ncvars.out")
-    message("creating nc objects")
-    nc.obj <- nc_create(filename, var.dat)
-    message("placing nc vars")
-    ncvar_put(nc.obj, var.dat[[var.name]], data.array)
+    if(verbose) { message("creating nc objects") }
+    #save(list=("var.dat"), file="/home/cew/Code/odd_var_out")
+    #stop("investigate your output")
+    nc.obj <- nc_create(filename, var.dat, verbose=FALSE)
+    if(verbose) { message("placing nc vars") }
+    if(!writelist){
+      nc.obj <- nc_open(filename, write=TRUE)
+      ncvar_put(nc.obj, var.dat[[var.name]], data.array)
+    }else{
+      for (loop in 1:length(data.array)){
+        #nc.obj <- nc_open(filename, write=TRUE)
+        loop.varname <- names(data.array)[loop]
+        if(verbose) { message(paste("populating", loop.varname)) }
+        ncvar_put(nc=nc.obj, 
+                            varid=var.dat[[loop.varname]], 
+                            vals=data.array[[loop.varname]], verbose=FALSE)
+      }
+    }
     for (v in 1:length(var.data)){
       loop.var <- names(var.data)[[v]]
-      message(paste("adding", loop.var, "and attributes"))
+      if(verbose) { message(paste("adding", loop.var, "and attributes")) }      
       ncvar_put(nc.obj, var.dat[[loop.var]], var.data[[loop.var]])
       all.att.list <- attributes(var.data[[loop.var]])
       all.att.list <- all.att.list[!(names(all.att.list)%in% c("units", "longname", "prec", "dim", "dimids"))] #"missval", 
@@ -120,25 +166,47 @@ WriteNC <-  function(filename,data.array,var.name,xlon,ylat,prec='double', missv
           ncatt_put(nc.obj, loop.var,  names(all.att.list)[[at]], all.att.list[[at]])
         }
       }
-    }   
-    #Link axes to the dimensions
-    ncatt_put(nc.obj,"time","axis",'T')
-    ncatt_put(nc.obj,"lat","axis",'Y')
-    ncatt_put(nc.obj,"lon","axis",'X')
-
-      #Link bounds variables to the corresponding dims
-      ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
-      ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
-      ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
-    #And establish long names in the code
-    ncatt_put(nc.obj,"time","standard_name","time")
-    ncatt_put(nc.obj, "time", "long_name", "time")
-    ncatt_put(nc.obj,"lat","standard_name","latitude")
-    ncatt_put(nc.obj,"lat","long_name","latitude")
-    ncatt_put(nc.obj,"lon","standard_name","longitude")
-    ncatt_put(nc.obj,"lon","long_name","longitude")
-    ncatt_put(nc.obj,var.dat[[var.name]],"units",units)
-    ncatt_put(nc.obj,var.dat[[var.name]],"standard_name",cfname)
+    }
+    if(verbose) { print("cloning attributes") }
+    for (i in 1:length(dim.list)){
+      dim.name <- names(dim.list)[i]
+      orig.file <- attr(dim.list[[i]], "filename")
+      if(!is.null(orig.file)){
+        dim.name <- names(dim.list)[i]
+        #This may not work if you name the arguments present. Check on that?
+        nc.copy.atts(nc_open(orig.file), dim.name, nc.obj, dim.name, c("_FillValue", "FillValue", "_missval"))
+      }else{
+        if(verbose) { print("null dim; skipping to next") }
+      }
+    }
+    
+#     #Link axes to the dimensions
+#     ncatt_put(nc.obj,"time","axis",'T')
+#     ncatt_put(nc.obj,"lat","axis",'Y')
+#     ncatt_put(nc.obj,"lon","axis",'X')
+# 
+#       #Link bounds variables to the corresponding dims
+#       ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
+#       ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
+#       ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
+#     #And establish long names in the code
+#     ncatt_put(nc.obj,"time","standard_name","time")
+#     ncatt_put(nc.obj, "time", "long_name", "time")
+#     ncatt_put(nc.obj,"lat","standard_name","latitude")
+#     ncatt_put(nc.obj,"lat","long_name","latitude")
+#     ncatt_put(nc.obj,"lon","standard_name","longitude")
+#     ncatt_put(nc.obj,"lon","long_name","longitude")
+    
+    ##CEW: figure out how to add these in once rest are tested
+#    ncatt_put(nc.obj,var.dat[[var.name]],"units",units)
+    #The cfname attribute behavior needs to be checked more
+    if(length(cfname)==1 && cfname!='none'){
+      ncatt_put(nc.obj,var.dat[[var.name]],"standard_name",cfname)
+    }
+    #Climatology
+    if(!is.na(modulo)){
+      ncatt_put(nc.obj, "time", 'modulo', "")
+    }
     ########### write grid coordinate bounds ####################
     
     #############################################################  

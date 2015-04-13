@@ -238,7 +238,6 @@ list.hist <- ReadMultiVars(file.prefix=hist.indir_1,
                            file.suffix=pred.dir.suffix, 
                            blank.filename=hist.filename, 
                            var.list=predictor.vars, 
-                           dim='ensmem', 
                            add.ens.dim=TRUE,
                            verbose=TRUE)
 print("Applying spatial mask to coarse historic predictor dataset")
@@ -252,7 +251,7 @@ list.fut <- ReadMultiVars(file.prefix=fut.indir_1,
                            file.suffix=pred.dir.suffix, 
                            blank.filename=fut.filename, 
                            var.list=predictor.vars, 
-                           dim=c('ensmem', 'temporal'), 
+                           dim=c('temporal'), 
                            add.ens.dim=TRUE, 
                            verbose=TRUE)
 
@@ -358,8 +357,9 @@ out.file <- paste(output.dir,"/", out.filename,sep='')
 #bounds.list.combined <- c(spat.mask$vars, tmask.list[[length(tmask.list)]]$vars)
 #isBounds <- length(bounds.list.combined) > 1
 ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
-                          xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-                          downscale.tseries=list.fut$dim$time, 
+                          #xlon=list.target$dim$lon,ylat=list.target$dim$lat,
+                          #downscale.tseries=list.fut$dim$time, 
+                          dim.list=c(list.target$dim, list.fut$dim),
                           var.data=c(list.target$vars, list.fut$vars),
                           units=list.fut$units$value,
                           lname=paste('Downscaled ',list.fut$long_name$value,sep=''),

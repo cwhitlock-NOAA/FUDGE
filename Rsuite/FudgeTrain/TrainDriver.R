@@ -30,8 +30,6 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      if(create.ds.out){
        #Should only be false if explicitly running with the intent of creating only
        #a QC mask - all other cases produce *some* ds.out
-       print(dim(target.masked.in))
-       print(dim(fut.masked.in))
        ds.vector =  array(NA,dim=c( c(dim(target.masked.in)[1:2]),    #spatial /ens dims
                                        dim(fut.masked.in)[4])) #time dims
        print(paste("dimensions of downscaling output vector:", paste(dim(ds.vector), collapse=" ")))
@@ -68,7 +66,6 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      #(assumes that all time series will be of same length)
      #Also keep in mind: both the time windows and the kfold masks are, technically, 
      #time masks. You're just doing a compression step immediately after one but not the other.
-     print(dim(target.masked.in))
      targ.dim <- dim(target.masked.in)
      for(i.index in 1:targ.dim[1]){  #Most of the time, this will be 1
        for(j.index in 1:targ.dim[2]){
@@ -76,6 +73,7 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
               sum(!is.na(hist.masked.in[i.index,j.index,,]))!=0 &&
               sum(!is.na(fut.masked.in[i.index,j.index,,]))!=0){
            message(paste("Begin processing point with i = ", i.index, "and j =", j.index))
+           #print(summary(as.vector(fut.masked.in[i.index, j.index,,])))
            loop.temp <- LoopByTimeWindow(train.predictor = hist.masked.in[i.index, j.index,,], 
                                          train.target = target.masked.in[i.index, j.index,,], 
                                          esd.gen = fut.masked.in[i.index, j.index,,], 

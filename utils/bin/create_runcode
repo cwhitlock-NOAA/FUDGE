@@ -19,18 +19,18 @@ set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
 set list_present = `echo $PREDICTOR | grep ","`
 echo $list_present
 if($list_present != "") then 
-  set count=1
-  while($cmd != '')
-    @ count=$count + 1
-    echo $count
-    set predlist = ( $predlist "'"${cmd}"'" )
-    if ($pctr > 1) then
+ set count=1
+ while($cmd != '')
+   set cmd = `echo ${cmd} | tr -s " " `
+   set predlist = ( $predlist "'"${cmd}"'" )
+   if ($pctr > 1) then
       set predlist1 = ( $predlist1",'"${cmd}"'")
-    else
+   else
       set predlist1 = ( $predlist1"'"${cmd}"'")
-    endif
-    @ pctr = $pctr + 1
-    set cmd =  "`echo "$PREDICTOR" | cut -d',' -f$pctr `"
+   endif
+   @ pctr = $pctr + 1
+   set cmd = "`echo ${PREDICTOR} | cut -d',' -f$pctr `"
+ end
 ## preds in c list predlist now##
 ##end handle multiple predictors
   echo "predlist $predlist1"
@@ -129,6 +129,8 @@ set esdgen = $argv[42]
 set basedir = $argv[43]
 set TEMPLATE_LIST = ( $TEMPLATE_LIST "FUDGEROOT":"'"${basedir}"'")
 set iend = $argv[44]
+#CEW edit next line
+echo "This is iend: $iend"
 echo $iend
 set params = $argv[45]
 if($params == 'na') then 
@@ -187,7 +189,11 @@ endif
 #############dev
 set lon_end = $iend
 set lon_start = $istart
-if ( $lon_end < $lon_start ) then
+#CEW edit 4-10
+echo "this is the if statment causing the problem, I think"
+echo $lon_end
+echo $lon_start
+if( $lon_end < $lon_start ) then
  echo "Please check second argument: lon_end  should be greater than or equal to lon_start"
  exit
 endif
@@ -195,6 +201,7 @@ endif
 set codeprefix=$sbasedir/runcode/
 mkdir -p $codeprefix
 set cnter = 1
+
 
 #new
 #TODO we could store templates in a method sub-dir and switch it based on the templates
