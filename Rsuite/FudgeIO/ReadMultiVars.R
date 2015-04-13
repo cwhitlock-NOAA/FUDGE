@@ -30,7 +30,7 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
     }
   }
   #Create vector to store all var values
-  all.dim <- c(dim.list[[1]][1:2], length(dim.list), dim.list[[1]][3])
+  all.dim <- c(dim.list[[1]][1:3], dim.list[[1]][3]) # No longer adding a var/ensemble dimension
   data.array <- array(rep(NA, prod(all.dim)), dim=all.dim)
   #Then, once the dimensions are determined, look over the files and obtain the vars, 
   #slotting them into the relevant bits one by one. 
@@ -44,6 +44,8 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
                     point="",                     #The part of the x,y coordinate scheme that can be deduced. Not implemented yet.
                     p.rep=""                      #Physics rip used. Not used yet, and might not get used at all.
   )
+  data.list <- rep(list(data.array), lenth(data.list))
+  names(data.list) <- unlist(var.list)
   for(v in 1:length(var.list)){
     var=var.list[[v]]
     if(verbose){print(paste("Reading in var", var))}

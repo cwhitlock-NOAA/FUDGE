@@ -86,7 +86,6 @@ callPRPreproc <- function(test, input, postproc.output){
                                          lopt.drizzle=lopt.drizzle, 
                                          lopt.conserve=lopt.conserve, 
                             zero.to.na=apply.0.mask)
-  if(test$pp.args$apply_0_mask=='on'){
     fut.prmask <- temp.out$future$pr_mask
     ###TODO: Change specifications to get a better name for this.
     ###Indexing by method is going to be REALLY HANDY
@@ -94,7 +93,6 @@ callPRPreproc <- function(test, input, postproc.output){
     print(names(pr_mod))
     pr_mod$qc_args$fut.prmask <- fut.prmask
     postproc.output$propts <- pr_mod
-  }
   return(list('input'=list('hist.targ' = temp.out$ref$data, 'hist.pred' = temp.out$adjust$data, 'fut.pred' = temp.out$future$data),
               's5.list'=postproc.output))
 }
