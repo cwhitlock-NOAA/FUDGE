@@ -73,7 +73,6 @@ adapt.pp.input <- function(mask.list=list('na'), pr_opts=list('na')){
                            qc_args=mask.list[[i]]$qc_options)
       ##DISCUSS RENAMING THESE
     }
-    print(post_ds)
   }
   if(pr_opts[[1]]!='na'){
     pre_ds$propts <- list(type='PR', var='pr', apply='all', loc='outloop', 
@@ -91,6 +90,7 @@ adapt.pp.input <- function(mask.list=list('na'), pr_opts=list('na')){
   return(list('pre_ds'=pre_ds, 'post_ds'=post_ds))  
 }
 
+####This should maybe go in a function of its own?
 apply.any.mask <- function(data, mask, dim.apply=NA, na.rm=FALSE, verbose=FALSE){ #switched 'mask' and 'data' in arg
   #Applies any mask to an array
   #array is assumed to be in x,y,t order, with additional dims between
@@ -114,7 +114,8 @@ apply.any.mask <- function(data, mask, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
     if(dim.apply=='time' || dim.apply=='temporal'){
       length.time <- data.dim[length(data.dim)]
       if(length.time!=mask.dim){
-        stop("mask dim error; try again")
+        stop(paste("Error in apply.any.mask over temporal points: mask had dimensions of",paste(mask.dim, collapse=" "), 
+                   "and data had dimensions of", paste(data.dim, collapse=" ")))
       }else{
         if(length(data.dim) > 1){
           #There is more than one dimension present
@@ -141,12 +142,24 @@ apply.any.mask <- function(data, mask, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
     }else if(dim.apply=='spatial'){
       dim.spatial <- mask.dim
       if(sum(dim.spatial==data.dim[1:2])!=2){
-        stop("mask dim error; try again")
+        stop(paste("Error in apply.any.mask over spatial points: mask had dimensions of",paste(mask.dim, collapse=" "), 
+                   "and data had dimensions of", paste(data.dim, collapse=" ")))
       }else{
         result <- as.vector(data) * as.vector(mask) #x,y,ens/var,t order (if ens exists)
         dim(result) <- data.dim
       }
       #Not implementing a na.rm option for this; too prone to abuse in current version of code
+    }
+  }else{
+    #If no application dim is returned, assume that the dims of the mask and the 
+    #data are supposed to be identical, and act accordingly
+    if(sum(mask.dim!=data.dim)==0){
+      #If they are not non-identical anywhere
+      result <- as.vector(mask)*as.vector(data)
+      dim(result) <- data.dim
+    }else{
+      stop(paste("Error in apply.any.mask over all points: mask had dimensions of",paste(mask.dim, collapse=" "), 
+                 "and data had dimensions of", paste(data.dim, collapse=" ")))
     }
   }
   return(result)

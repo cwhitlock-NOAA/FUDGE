@@ -133,8 +133,6 @@ if(!exists('pre_ds')){ #put better check in here once you are done with the test
   pre_ds <- pp.out$pre_ds
   post_ds <- pp.out$post_ds
 }
-print(pre_ds)
-print(post_ds)
 
 #Initialize instructions for pre- and post-ds adjustment
 post.ds <- compact(lapply(post_ds, index.a.list, 'loc', 'outloop'))
@@ -270,9 +268,9 @@ print('preproc application successful')
 if(length(pre.ds) !=0){
   message('Applying S3 Adjustment')
   temp.output <- callS3Adjustment(s3.instructions=pre.ds, 
-                                  hist.pred = list.hist$clim.in, 
-                                  hist.targ = list.target$clim.in, 
-                                  fut.pred = list.fut$clim.in,  
+                                  hist.pred = list.hist$clim.in,   hist.pred.atts=list.hist$att_table,
+                                  hist.targ = list.target$clim.in, hist.targ.atts=list.target$att_table,
+                                  fut.pred = list.fut$clim.in,     fut.pred.atts=list.fut$att_table,
                                   s5.instructions=post.ds)
   #Assign output and remove temporary output 
   post.ds <- temp.output$s5.list
@@ -324,6 +322,7 @@ message("Calling Section 5 Adjustments")
 if(length(post.ds) !=0){
   temp.postproc <- callS5Adjustment(post.ds,
                                     data = ds$esd.final,
+                                    data.atts = list.target$att_table,
                                     hist.pred = list.hist$clim.in, 
                                     hist.targ = list.target$clim.in, 
                                     fut.pred  = list.fut$clim.in)
@@ -341,31 +340,15 @@ print(summary(as.vector(ds$esd.final), digits=6))
 #Replace NAs by missing 
 ds$esd.final[is.na(ds$esd.final)] <- 1.0e+20 #TODO: Mod for changing all missing values. 
 
-#Or: replace within the loop, adding in a missval. That is def. a thing that you could do.
-#But it should probably wait until there is a possibility that there might be more than
-#one downscaled output, and how you'd decide to loop over those.
-
-
-#So: for all RIPs in the list of rips to work with, write data as a separate file. 
-#This means that each RIP needs to be a separate file, and therefore *one* out.filename
-#is probably not sufficient. Therefore, have a chat with the ESD team about where the 
-#RIP of the input data would be put for safekeeping. 
-
-#for (rip in 1:length(rips.list)){
 out.file <- paste(output.dir,"/", out.filename,sep='')
 
-#Create structure containing bounds and other vars
-
-#bounds.list.combined <- c(spat.mask$vars, tmask.list[[length(tmask.list)]]$vars)
-#isBounds <- length(bounds.list.combined) > 1
 ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
-                          #xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-                          #downscale.tseries=list.fut$dim$time, 
                           dim.list=c(list.target$dim, list.fut$dim),
                           var.data=c(list.target$vars, list.fut$vars),
-                          units=list.fut$units$value,
-                          lname=paste('Downscaled ',list.fut$long_name$value,sep=''),
-                          cfname=list.target$cfname$value, verbose=TRUE 
+                          prec=list.target$att_table[[target.var]]$prec,
+                          units=list.target$att_table[[target.var]]$units,
+                          lname=paste('Downscaled ',"dummy variable until we figure out what needs to go in here for metadata",sep=''), #list.fut$long_name$value
+                          cfname=list.target$att_table[[target.var]]$standard_name, verbose=TRUE 
                           )
 
 #Write Global attributes to downscaled netcdf
@@ -398,7 +381,6 @@ message(paste('Downscaled output file:',ds.out.filename,sep=''))
 if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the beginning, as part of the QC functions
   for (var in predictor.vars){
     ds$qc.mask[is.na(ds$qc.mask)] <- as.double(1.0e20)
-    ###qc.method needs to get included in here SOMEWHERE.
     qc.var <- paste(var, 'qcmask', sep="_")
     if(Sys.info()['nodename']=="cew"){ #'cew'
       #only activated for testing on CEW workstation
@@ -415,17 +397,22 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
       print("ERROR! Dir creation script not beahving as expected!")
     }
     message(paste('attempting to write to', qc.file))
-    qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
-                              xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-                              downscale.tseries=list.fut$dim$time, 
+#     qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
+#                               xlon=list.target$dim$lon,ylat=list.target$dim$lat,
+#                               downscale.tseries=list.fut$dim$time, 
+#                               var.data=c(list.target$vars, list.fut$vars),
+#                               prec='float',missval=1.0e20,
+#                               units="1",
+#                               lname=paste('QC Mask')
+#     )
+    qc.out.filename = WriteNC(out.file,ds$qc.mask,qc.var,
+                              dim.list=c(list.target$dim, list.fut$dim),
                               var.data=c(list.target$vars, list.fut$vars),
-                              prec='float',missval=1.0e20,
+                              prec='float',
                               units="1",
                               lname=paste('QC Mask')
-    )
+                              )
     #For now, patch the variables in here until se get s5 formalized in the XML
-#     message("printing the qc arguments:")
-#     message(paste(qc.maskopts$qc.args, sep=" "))
     WriteFUDGEGlobals(qc.out.filename,k.fold,target.var,predictor.vars,label.training,ds.method,
                  configURL,label.validation,institution='NOAA/GFDL',
                  version=as.character(parse(file=paste(FUDGEROOT, "version", sep=""))),title=paste(target.var, "downscaled with", 

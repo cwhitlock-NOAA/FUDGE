@@ -32,7 +32,7 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
        #a QC mask - all other cases produce *some* ds.out
        targ.dim <- dim(target.masked.in)
        ds.vector =  array(NA,dim=c(targ.dim[1:2], dim(fut.masked.in[[1]])[3]))    #x,y,t (no ens)
-       print(paste("dimensions of downscaling output vector:", paste(dim(ds.vector), collapse=" ")))
+       if(verbose){print(paste("dimensions of downscaling output vector:", paste(dim(ds.vector), collapse=" ")))}
      }else{
        ds.out <- NULL
      }
@@ -66,12 +66,6 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      #(assumes that all time series will be of same length)
      #Also keep in mind: both the time windows and the kfold masks are, technically, 
      #time masks. You're just doing a compression step immediately after one but not the other.
-     
-     #Grab time indices for predictor datasets
-     print('train target:')
-     print(summary(target.masked.in))
-     print(length(target.masked.in))
-     #stop("examine input")
      
      for(i.index in 1:targ.dim[1]){  #Most of the time, this will be 1
        for(j.index in 1:targ.dim[2]){

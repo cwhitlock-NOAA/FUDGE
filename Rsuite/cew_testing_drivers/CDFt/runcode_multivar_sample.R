@@ -50,7 +50,8 @@ rm(list=ls())
 	target.nyrtot_1 <- (target.train.end.year_1 - target.train.start.year_1) + 1 
 	target.model_1 <- 'GFDL-HIRAM-C360'
 	target.freq_1 <- 'day' 
-        target.indir_1 <- '/archive/esd/PROJECTS/DOWNSCALING/GCM_DATA/NCPP/GFDL-HIRAM-C360/amip/day/atmos/day/r1i1p1/v20110601/tasmax/US48/OneD'
+        target.indir_1 <- paste0('/archive/esd/PROJECTS/DOWNSCALING/GCM_DATA/NCPP/GFDL-HIRAM-C360/amip/day/atmos/day/r1i1p1/v20110601/', 
+                                 target.var, '/US48/OneD')
 	target.time.window <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_19790101-20081231.nc'
 #------------- method name k-fold specs-----------------------#
         #ds.method <- 'BCQM' 
@@ -66,8 +67,8 @@ mask.output.dir <- '/home/cew/Code/testing/'
         args=list('na') 
  #Number of "cuts" for which quantiles will be empirically estimated (Default is 100 in CDFt package).
 #-------------- pp ---------------------------#
- #       mask.list <- list(mask1=list(type='SBiasCorr',adjust.out='off',qc.mask='on',qc_options=list(botlim=-6.,toplim=6.)))
-mask.list <- list('na')
+        mask.list <- list(mask1=list(type='SBiasCorr',adjust.out='off',qc.mask='on',qc_options=list(botlim=-6.,toplim=6.)))
+#mask.list <- list('na')
 ################### others ###################################
 #---------------- reference to go in globals ----------------------------------- 
 	configURL <-' Ref:http://gfdl.noaa.gov/esd_experiment_configs'

@@ -36,18 +36,19 @@ AdjustWetdays <- function(ref.data, ref.units=NULL,
                           adjust.future=NA, adjust.future.units=NULL,
                           opt.wetday, lopt.drizzle=FALSE, lopt.conserve=FALSE,
                           zero.to.na=FALSE,
-                          lopt.graphics=FALSE, verbose=TRUE){
+                          lopt.graphics=FALSE, verbose=FALSE){
   
   #Convert the threshold and create the reference mask
   wetday.convert <- convert.threshold(opt.wetday, ref.units)
   ref.wetdays <- ref.data > wetday.convert
   
   #Initialize the adjusted reference vectors
+  if(verbose){print('Initializing reference vectors')}
   adjust.wetdays <- MaskPRSeries(adjust.data, adjust.units, opt.wetday)
   future.wetdays <- MaskPRSeries(adjust.future, adjust.future.units, opt.wetday)
   
   ##Loop over all lat/lon points available in the input datasets
-  print(dim(ref.data))
+  if(verbose){print(paste('Looping over data of dimensions', paste(dim(ref.data), collapse=" ")))}
   
   for (i in 1:dim(ref.data)[1]){
     for (j in 1:dim(ref.data)[2]){ 
@@ -66,11 +67,11 @@ AdjustWetdays <- function(ref.data, ref.units=NULL,
           # Perform the following calculations and adjustments to the GCM time series
           # only if the user has asked for the drizzle adjusment to be applied 
           if(j%%10==0 || j==1){
-            print(" Consider applying drizzle adjustment")
+            if(verbose){print(" Consider applying drizzle adjustment")}
           }
           if (fraction.wet.adj > fraction.wet.ref) {
             if(j%%10==0 || j==1){
-              print(" Need to do drizzle adjustment")
+              if(verbose){print(" Need to do drizzle adjustment")}
             }
             #Find the threshold for a drizzle adjustment
             first.above.threshold <- quantile(loop.ref,  probs=(1.0-fraction.wet.ref),na.rm=TRUE)  
@@ -80,7 +81,7 @@ AdjustWetdays <- function(ref.data, ref.units=NULL,
             threshold.wetday.adj <- quantile(loop.adj, names = FALSE,
                                              probs=(num.zero.in.adjusted/length(loop.adj)), 
                                              na.rm=TRUE)
-            print(paste("threshold:", threshold.wetday.adj))
+            if(verbose){print(paste("threshold:", threshold.wetday.adj))}
             #If it would result in changed results, apply
 #            if(threshold.wetday.adj > wetday.convert){
               loop.adj.wetdays <- loop.adj > threshold.wetday.adj
@@ -97,17 +98,14 @@ AdjustWetdays <- function(ref.data, ref.units=NULL,
       }
       ###Now consider the conserve option
       if(lopt.conserve==TRUE){
-        if(j%%10==0 || j==1){ print("entering conserve option") }
+        if(j%%10==0 || j==1){ if(verbose){print("entering conserve option")} }
         loop.ref <- conserve.prseries(loop.ref, loop.ref.wetdays) 
         
         ###And do the same thing for the adjusted data
-        if(j%%10==0 || j==1){ print("starting adjust section") }
+        if(j%%10==0 || j==1){ if(verbose){print("starting adjust section")} }
         loop.adj <- conserve.prseries(loop.adj, loop.adj.wetdays)
         ###and the future, if that applies
         loop.fut <- conserve.prseries(loop.fut, loop.fut.wetdays)
-        #           total.trace.pr <- sum(loop.fut[loop.fut.wetdays==FALSE])
-        #           pr.adjust <- total.trace.pr/sum(loop.fut.wetdays)
-        #           loop.fut[loop.fut.wetdays==TRUE] <- (loop.fut[loop.fut.wetdays==TRUE] + pr.adjust)
       } 
       ref.data[i,j,][!is.na(ref.data[i,j,])] <- loop.ref
       # loop.ref.wetdays never gets modified 
@@ -178,7 +176,7 @@ convert.threshold <- function(index, units){
   #'dataset. 
   #'Requires the Udunits2 package to 
   #'work. 
-  print(paste("Converting threshold", index))
+  #stop('this is where the errors are')
   if(!is.null(units)){
     units <- units.CF.convert(units)
     #Set options for determining what qualifies as a 'wet day'

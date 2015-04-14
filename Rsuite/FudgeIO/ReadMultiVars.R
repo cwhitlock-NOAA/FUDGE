@@ -22,11 +22,14 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
   #Question: is everything going to be forced into 4 dimensions? Ask again later.
   #For now, it's probably not unsafe to assume that everything will have 3 dims, and that multivariate is the 
   #way to go for the future
-  for(d in 1:(length(dim.list)-1)){
-    if(sum(dim.list[[d]]!=dim.list[[d+1]])!=0){
-      #If all dims are not equal, return an error
-      stop("Error in ReadMultiVars: dim.list of", d, "was", paste(dim.list[[d]], collapse=" "), 
-           "and dim.list of", d+1, "was", paste(dim.list[[d+1]], collapse=" "))
+  if(length(dim.list)!=1){
+    #Only run check if there are multiple vars
+    for(d in 1:(length(dim.list)-1)){
+      if(sum(dim.list[[d]]!=dim.list[[d+1]])!=0){
+        #If all dims are not equal, return an error
+        stop("Error in ReadMultiVars: dim.list of", d, "was", paste(dim.list[[d]], collapse=" "), 
+             "and dim.list of", d+1, "was", paste(dim.list[[d+1]], collapse=" "))
+      }
     }
   }
   #Create vector to store all var values
@@ -38,33 +41,32 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
   #Don't forget the var naming conventions at this point: var is the first part of the 
   #name, rip is the second, and point identity is the third.
   #Initialize table of relevant attributes (because this is going to be important later)
-  att.table <- list(var.name=unlist(var.list),    #Names of the variables. If muti files, will need editing.
-                    #$var.longname=unlist(var.list),#Determined from the input file. cfname in other places.
-                    var.units="",                 #Units for each variable. Same caveat applies as above.
-                    var.prec="",                  #Precision when writing to file. Maybe not a big deal, but keep losing it.
-                    point="",                     #The part of the x,y coordinate scheme that can be deduced. Not implemented yet.
-                    p.rep=""                      #Physics rip used. Not used yet, and might not get used at all.
-  )
+#   att.table <- list(var.name=unlist(var.list),    #Names of the variables. If muti files, will need editing.
+#                     #$var.longname=unlist(var.list),#Determined from the input file. cfname in other places.
+#                     var.units="",                 #Units for each variable. Same caveat applies as above.
+#                     var.prec="",                  #Precision when writing to file. Maybe not a big deal, but keep losing it.
+#                     point="",                     #The part of the x,y coordinate scheme that can be deduced. Not implemented yet.
+#                     p.rep=""                      #Physics rip used. Not used yet, and might not get used at all.
+#   )
   data.list <- rep(list(data.array), length(var.list))
   names(data.list) <- unlist(var.list)
+    att_table <- list()
   for(v in 1:length(var.list)){
     var=var.list[[v]]
     if(verbose){print(paste("Reading in var", var))}
     if(v==1){
       out.list <- ReadNC(nc.list[[v]], var=var, dim=dim) #No longer adding ensemble dimension
       data.list[[v]] <- out.list$clim.in
-      att.table$var.units[[v]] <- ifelse(out.list$units$hasatt, 
-                                         out.list$units$value, "")
+      att_table[[var]] <- out.list$att_table[[var]]
     }else{
       temp.list <- ReadNC(nc.list[[v]], var=var, dim='none')
       data.list[[v]] <- temp.list$clim.in
-      att.table$var.units[[v]] <- ifelse(temp.list$units$hasatt, 
-                                         temp.list$units$value, "")
+      att_table[[var]] <- temp.list$att_table[[var]]
     }
   }
   #Assign and exist
   out.list$clim.in <- data.list
-  out.list$att.table <- att.table
+  out.list$att_table <- att_table
   return(out.list)
 }
 

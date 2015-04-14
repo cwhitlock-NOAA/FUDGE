@@ -2,8 +2,9 @@
 rm(list=ls())
 
 #--------------predictor and target variable names--------#
-	predictor.vars <- list('tasmax', 'tasmin') 
-	target.var <- 'tasmax'
+	#predictor.vars <- list('tasmax', 'tasmin') 
+predictor.vars <- list('pr') 
+	target.var <- 'pr'
 #--------------grid region, mask settings----------#
         grid <- 'SCCSC0p1' 
         spat.mask.dir_1 <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/geomasks/red_river_0p1/OneD/' 
@@ -50,12 +51,13 @@ pred.dir.suffix <- '/SCCSC0p1/OneD/' #use this predictor variable and this  suff
 	target.nyrtot_1 <- (target.train.end.year_1 - target.train.start.year_1) + 1 
 	target.model_1 <- 'livneh'
 	target.freq_1 <- 'day' 
-        target.indir_1 <- '/archive/esd/PROJECTS/DOWNSCALING//OBS_DATA/GRIDDED_OBS//livneh/historical/day/atmos/day/r0i0p0/v1p2/tasmax/SCCSC0p1/OneD/'
+target.indir_1 <- paste0('/archive/esd/PROJECTS/DOWNSCALING//OBS_DATA/GRIDDED_OBS//livneh/historical/day/atmos/day/r0i0p0/v1p2/',
+                         target.var,'/SCCSC0p1/OneD/')
 	target.time.window <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_pm2weeks_19610101-20051231_olap.nc'
 
 #------------- method name k-fold specs-----------------------#
-        #ds.method <- 'CDFt' 
-ds.method <- 'multi.lm'
+        ds.method <- 'CDFt' 
+#ds.method <- 'multi.lm'
 	ds.experiment <- paste0('RRtxp1-', ds.method, '-C34atTestL01K00')
 	k.fold <- 0 
 	
@@ -66,6 +68,10 @@ ds.method <- 'multi.lm'
         args=list(dev=1,npas='default') 
  #Number of "cuts" for which quantiles will be empirically estimated (Default is 100 in CDFt package).
 #-------------- pp ---------------------------#
+pr_opts=list(pr_threshold_in='us_trace',pr_freqadj_in='off',pr_conserve_in='on',
+             pr_threshold_out='us_trace',pr_conserve_out='on', #'us_trace'
+             apply_0_mask='off')
+#  pr_opts=list(pr_threshold_in='us_trace',pr_freqadj_in='off',pr_conserve_in='on',pr_threshold_out='us_trace',pr_conserve_out='on')
         #mask.list <- list(mask1=list(type='SBiasCorr',adjust.out='off',qc.mask='on',qc_options=list(botlim=-6.,toplim=6.)))
 mask.list <- list("na")
 ################### others ###################################

@@ -23,6 +23,7 @@
 #'CEW edit 10-22 to incorporate the proposed looping structure
 callS5Adjustment<-function(s5.instructions=list('na'),
                    data = NA, #downscaled data - from this run or another
+                           data.atts = NA,
                    hist.pred = NA, 
                    hist.targ = NA, 
                    fut.pred = NA, 
@@ -31,7 +32,7 @@ callS5Adjustment<-function(s5.instructions=list('na'),
 #                      qc.data=NULL, qc.mask=NULL){
 #  element.list <- list( list("s5.method" = s5.method, "s5.args" = s5.args, 
  #                      'create.qc.mask' = create.qc.mask, 'create.adjust.out' = create.adjust.out))
-  input<- list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred)
+  input<- list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred, 'data.atts'=data.atts)
   qc.mask <- NULL  #If no mask generated, will keep being null forever
   adjusted.output <- list("ds.out" = data, "qc.mask" = qc.mask)
   for(element in 1:length(s5.instructions)){
@@ -75,16 +76,6 @@ callSdev <- function(test, input, adjusted.output){
     out.list$ds.out <- adjust.vec
   }
   return(out.list)
-}
-
-callSdev2 <- function(data, qc.data){
-  #returns TRUE if more than half of the values in data
-  #differ from qc.data by less than half the standard deviation
-  #of qc.data
-  qc.stdev <- sd(qc.data, na.rm=FALSE)
-  stdev.vec <- abs(qc.data-data) > (qc.stdev/10)
-  print(sum(stdev.vec)/length((data)/2))
-  return( sum(stdev.vec) >= (length(data)/2) )
 }
 
 callSBCorr <- function(test, input, adjusted.output){
@@ -156,7 +147,7 @@ callPRPostproc <- function(test, input, adjusted.output){
     message('Not applying wetday mask. Output may have fewer days without precipitation than expected.')
   }
   #Obtain mask of days that will be eliminated
-  out.mask <- MaskPRSeries(adjusted.output$ds.out, units=attr(input$hist.targ, "units")$value, index=test$qc_args$thold)
+  out.mask <- MaskPRSeries(adjusted.output$ds.out, units=input$data.atts[[1]]$units, index=test$qc_args$thold)
   #Apply the conserve option to the data
   if(test$qc_args$conserve=='on'){
     #There has got to be a way to do this with 'apply' and its friends, but I'm not sure that it;s worth it      
@@ -174,13 +165,6 @@ callPRPostproc <- function(test, input, adjusted.output){
   }
   #Apply the mask
   adjusted.output$ds.out <- as.numeric(adjusted.output$ds.out) * out.mask
-
-#   pr.adjusted <- AdjustWetdays(ref.data=input$hist.targ, ref.units=attr(input$hist.targ, "units")$value, 
-#                             adjust.data=input$hist.pred, adjust.units=attr(input$hist.pred, "units")$value, 
-#                             adjust.future=input$fut.pred, adjust.future.units=attr(input$fut.pred, "units")$value,
-#                             opt.wetday=test$qc_args$thold, 
-#                             lopt.drizzle=FALSE, 
-#                             lopt.conserve=test$qc_args$conserve)
   if(test$qc.mask=='on'){
     adjusted.output$qc.mask <- out.mask
   }

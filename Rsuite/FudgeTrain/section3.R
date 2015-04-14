@@ -31,17 +31,19 @@ callS3Adjustment<-function(s3.instructions=list('na'),
                    hist.pred = NA, 
                    hist.targ = NA, 
                    fut.pred = NA, 
+                           hist.pred.atts=NA,
+                           fut.pred.atts=NA,  
+                           hist.targ.atts=NA,
                    create.qc.mask=FALSE, create.adjust.out=FALSE, 
                    s5.instructions=list('na')){
   #Create list of variables that will not change with iteration
   #input<- list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred)
   #Define data that will change with iteration
-  adjusted.list <- list(input=list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred), 
+  adjusted.list <- list(input=list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred, 
+                                   att.list=list('fut.pred'=fut.pred.atts, 'hist.pred'=hist.pred.atts, 'hist.targ'=hist.targ.atts)), 
                         s5.list=s5.instructions)
-  
   for(element in 1:length(s3.instructions)){
     test <- s3.instructions[[element]]
-    print(test)
     #Note that BOTH ELEMENTS get returned for the adjusted output. 
     #The transforms may have elements that will depend on the conditions of the initial transform, 
     #and the order of the backtransform is going to be dependant on the order of the elements
@@ -59,7 +61,8 @@ callPRPreproc <- function(test, input, postproc.output){
   #as output by the precipitation adjustment
   #functions
   #Note: you get truly SPECTACULAR fatal errors if one of the units values
-  #passed to the function is null. 
+  #passed to the function is null.
+  ##Revising 4-14 for the 
 
   pr.names <- (names(test$pp.args))
   #Obtain function args
@@ -78,21 +81,37 @@ callPRPreproc <- function(test, input, postproc.output){
     message("Assuming that an old XML is being used; default behavior in place")
     apply.0.mask=FALSE
   }
+  #Select the variables of interest, and put them through the
+  var <- names(input$att.list$hist.targ)
   #at the end, instructions are unchanged
-  temp.out <- AdjustWetdays(ref.data=input$hist.targ, ref.units=attr(input$hist.targ, "units")$value, 
-                                         adjust.data=input$hist.pred, adjust.units=attr(input$hist.pred, "units")$value, 
-                                         adjust.future=input$fut.pred, adjust.future.units=attr(input$fut.pred, "units")$value,
-                                         opt.wetday=threshold, 
-                                         lopt.drizzle=lopt.drizzle, 
-                                         lopt.conserve=lopt.conserve, 
+  temp.out <- AdjustWetdays(ref.data=input$hist.targ,            ref.units=input$att.list$hist.targ[[var]]$units, 
+                            adjust.data=input$hist.pred[[var]],  adjust.units=input$att.list$hist.pred[[var]]$units, 
+                            adjust.future=input$fut.pred[[var]], adjust.future.units=input$att.list$fut.pred[[var]]$units,
+                            opt.wetday=threshold, 
+                            lopt.drizzle=lopt.drizzle, 
+                            lopt.conserve=lopt.conserve, 
                             zero.to.na=apply.0.mask)
     fut.prmask <- temp.out$future$pr_mask
     ###TODO: Change specifications to get a better name for this.
     ###Indexing by method is going to be REALLY HANDY
     pr_mod <- postproc.output$propts
-    print(names(pr_mod))
     pr_mod$qc_args$fut.prmask <- fut.prmask
+    if(apply.0.mask){
+      #only apply the mask if it it will result in more missing values
+      #technically, it's a time mask - but it can be 3-D
+      #...wait a minute - what were the dimensions of this mask again?
+      #Answer: should be exactly the same as the dimensions of the input data.
+      #Looks like a job for apply.any.mask indeed.
+      input$hist.targ        <- (temp.out$ref$data   * temp.out$ref$pr_mask)
+      input$hist.pred[[var]] <- (temp.out$adjust$data* temp.out$adjust$pr_mask)
+      input$fut.pred[[var]]  <- (temp.out$future$data* temp.out$future$pr_mask)    
+    }else{
+      #Add back into the original structure
+      input$hist.targ        <- temp.out$ref$data   #only a single target variable
+      input$hist.pred[[var]] <- temp.out$adjust$data
+      input$fut.pred[[var]]  <- temp.out$future$data
+    }
     postproc.output$propts <- pr_mod
-  return(list('input'=list('hist.targ' = temp.out$ref$data, 'hist.pred' = temp.out$adjust$data, 'fut.pred' = temp.out$future$data),
+  return(list('input'=input,
               's5.list'=postproc.output))
 }

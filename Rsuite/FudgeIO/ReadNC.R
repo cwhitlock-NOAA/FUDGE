@@ -63,19 +63,31 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
       print(paste("dim after adjust:", paste(dim(clim.in), collapse=" ")))
     }
   #### get standard name,long name, units if present ####
-  attname = 'standard_name'
-  cfname <- ncatt_get(nc.object, var.name, attname) 
-  attname = 'long_name'
-  long_name <- ncatt_get(nc.object, var.name, attname)
-  attname <- 'units' 
-  units <- ncatt_get(nc.object, var.name, attname)
-    attr(clim.in, "units") <- units
-  prec <- nc.object$var[[var.name]]$prec
-    if(is.null(prec)){
-      #set prec to float if not present in input file
-      prec <- 'float'
+    att_list <- list('units'=ncatt_get(nc.object, var.name, 'units')$value, 
+                      'standard_name'=ncatt_get(nc.object, var.name, 'standard_name')$value,
+                      'long_name'=ncatt_get(nc.object, var.name, 'long_name')$value,
+                      'prec'=nc.object$var[[var.name]]$prec
+                      )
+    #Correct prec after the fact
+    if(is.null(att_list$prec)){
+      att_list$prec <- 'float'
     }
-    attr(clim.in, "prec") <- prec
+    att_table <- list()
+    att_table[[var.name]] <- att_list
+#   attname = 'standard_name'
+#   cfname <- ncatt_get(nc.object, var.name, attname) 
+#   attname = 'long_name'
+#   long_name <- ncatt_get(nc.object, var.name, attname)
+#   attname <- 'units' 
+#   units <- ncatt_get(nc.object, var.name, attname)
+#     attr(clim.in, "units") <- units
+#   prec <- nc.object$var[[var.name]]$prec
+#     if(is.null(prec)){
+#       #set prec to float if not present in input file
+#       prec <- 'float'
+#     }
+#     attr(clim.in, "prec") <- prec
+    
   ###Test code for determining what happens for unitless vars
   #######################################################
   #Control getting the dimensions and other variables in the output file
@@ -92,8 +104,9 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
     dim.list$vars <- c(dim.list$vars, temp.list$vars)
   }
   #######################################################
-  listout <- list("clim.in"=clim.in,"cfname"=cfname,"long_name"=long_name,"units"=units, 
-                  "dim"=dim.list$dim, 'vars'=dim.list$vars)
+#   listout <- list("clim.in"=clim.in,"cfname"=cfname,"long_name"=long_name,"units"=units, 
+#                   "dim"=dim.list$dim, 'vars'=dim.list$vars)
+    listout <- list("clim.in"=clim.in, "dim"=dim.list$dim, 'vars'=dim.list$vars, "att_table"=att_table)
   
   ###Add attributes for later QC checking against each other
   attr(listout, "calendar") <- nc.object$dim$time$calendar

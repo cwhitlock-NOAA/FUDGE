@@ -98,61 +98,6 @@ callMulti.lm <- function(pred, targ, new, args=NA){
   return(predict.lm(lm.model, newdata=new))
 }
 
-# callMulti.lm <- function(pred, targ, new, args, ds.lengths){
-#   #Creates a simple linear model without a cross-validation step. 
-#   #Mostly used to check that the procedure is working
-#   #esdgen.lengths <- length(new[[seq(1:length(new))]][[1]])
-#   
-#   #'@return A single vector of predictor data of the same
-#   #'length as the time dimension of new
-#   #'
-#   
-#     
-#   
-#   #Initialize output structure
-#   print("inside ds fxn")
-#   output <- list()
-#   print("looping on new")
-#   print(ds.lengths)
-#   print(mode(ds.lengths))
-#   for(el in 1:length(new)){
-#     print(el)
-#     print(ds.lengths[[el]])
-#     new.list <- rep(NA, ds.lengths[[el]])
-#     output[[names(new)[el]]] <- new.list
-#     print("assignment")
-#     print(length(output[[el]]))
-#     print(paste("lenght of output:", length(output)))
-#   }
-#   
-#   #First, get matrix of predictor values to use for prediction
-#   pred.mat <- matrix(unlist(pred, use.names=FALSE), ncol=length(pred), byrow=FALSE)
-#   print("dimensions of predictor matrix")
-#   print(dim(pred.mat))
-#   print(length(unlist(targ)))
-#   lm.coef <- coef(lm(unlist(targ) ~ pred.mat))
-#   
-#   for (i in 1:length(new)){ #new is organized first by RIP, then component
-#     new.name <- names(new)[i]
-#     #initialize ouput vector
-#     #out.vec <- rep(NA, length(new$rip[1]))
-#     new.mat <- matrix(unlist(new[i], use.names=FALSE), ncol=length(pred), byrow=FALSE)
-#     #Note that this assumes that the order of the points/vars
-#     #is the same for the predictor as the esd.gen datasets
-#     #Multiply over all the columns
-#     no.intercept <- sweep(x=new.mat, MARGIN=2, lm.coef[2:length(lm.coef)], "*")
-#     #Replace any NA values with 0 for the addition step
-#     no.intercept[is.na(no.intercept)] <- 0
-#     no.intercept <- apply(X=no.intercept, MARGIN=1, "sum")
-#     outvec <- no.intercept + lm.coef[1]
-#     print(mode(outvec))
-#     print(summary(outvec))
-#     output[new.name] <- list(outvec)
-#     print(summary(output))
-#   }
-#   print(summary(output))
-#   return(output)
-# }
 
 callCDFt <- function (pred, targ, new, args){
   #Calls the CDFt function
@@ -164,6 +109,12 @@ callCDFt <- function (pred, targ, new, args){
   }else{
     stop(paste("CDFt Method Error: parameter dev was missing from the args list"))
   }
+  
+  #Check for multiple vars; throw errors
+  #Unlist the predictors
+  pred <- unlist(pred)
+  new <- unlist(new)
+  
   if(!is.null(args$npas)){
     npas <- args$npas
     if(npas=='default' || npas==0){

@@ -160,7 +160,9 @@ WriteNC <-  function(filename,data.array,var.name,
       if(verbose) { message(paste("adding", loop.var, "and attributes")) }      
       ncvar_put(nc.obj, var.dat[[loop.var]], var.data[[loop.var]])
       all.att.list <- attributes(var.data[[loop.var]])
-      all.att.list <- all.att.list[!(names(all.att.list)%in% c("units", "longname", "prec", "dim", "dimids"))] #"missval", 
+      #Note: failure to include missval as one of the attributes that  doesn't get set 
+      #will result in giving all vars a missing value of 1e30. 
+      all.att.list <- all.att.list[!(names(all.att.list)%in% c("units", "longname", "prec", "dim", "dimids", "missval"))]
       if(length(all.att.list) > 0){
         for (at in 1:length(all.att.list)){
           ncatt_put(nc.obj, loop.var,  names(all.att.list)[[at]], all.att.list[[at]])
