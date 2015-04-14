@@ -216,11 +216,11 @@ message("Reading in target data")
 target.filename <- GetMiniFileName(target.var,target.freq_1,target.model_1,target.scenario_1,grid,
                                    target.file.start.year_1,target.file.end.year_1,i.file,file.j.range)
 print(target.filename)
-list.target <- ReadNC(OpenNC(target.indir_1, target.filename), var=target.var, dim="spatial", add.ens.dim=TRUE)
+list.target <- ReadNC(OpenNC(target.indir_1, target.filename), var=target.var, dim="spatial") #no longer adding ens dim
 message("Applying spatial mask to target data")
 #list.target$clim.in <- ApplySpatialMask(list.target$clim.in, spat.mask$masks[[1]])
 if(!is.null(spat.mask)){
-  list.hist$clim.in <-apply.any.mask(data=list.target$clim.in, mask=spat.mask$masks[[1]])
+  list.target$clim.in <-apply.any.mask(data=list.target$clim.in, mask=spat.mask$masks[[1]], dim.apply='spatial')
 }
 
 #TODO: When multiple RIP support is enabled, move the output files to the inner RIP loop
@@ -242,7 +242,8 @@ list.hist <- ReadMultiVars(file.prefix=hist.indir_1,
                            verbose=TRUE)
 print("Applying spatial mask to coarse historic predictor dataset")
 if(!is.null(spat.mask)){
-  list.hist$clim.in <-apply.any.mask(data=list.hist$clim.in, mask=spat.mask$masks[[1]])
+  list.hist$clim.in <- lapply(list.hist$clim.in, apply.any.mask, mask=spat.mask$masks[[1]], dim.apply='spatial')
+  #list.hist$clim.in <-apply.any.mask(data=list.hist$clim.in, mask=spat.mask$masks[[1]])
 }
 
 fut.filename <- GetMiniFileName("VAR",fut.freq_1,fut.model_1,fut.scenario_1,grid,
@@ -257,7 +258,8 @@ list.fut <- ReadMultiVars(file.prefix=fut.indir_1,
 
 print("Applying spatial mask to coarse future predictor dataset")
 if(!is.null(spat.mask)){
-  list.fut$clim.in <-apply.any.mask(data=list.hist$clim.in, mask=spat.mask$masks[[1]], )
+  #list.fut$clim.in <-apply.any.mask(data=list.hist$clim.in, mask=spat.mask$masks[[1]], dim.apply='spatial', verbose=TRUE)
+  list.fut$clim.in <- lapply(list.fut$clim.in, apply.any.mask, mask=spat.mask$masks[[1]], dim.apply='spatial', verbose=TRUE)
 }
 
 message('Looking for pre-processing functions to apply')

@@ -30,8 +30,8 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      if(create.ds.out){
        #Should only be false if explicitly running with the intent of creating only
        #a QC mask - all other cases produce *some* ds.out
-       ds.vector =  array(NA,dim=c( c(dim(target.masked.in)[1:2]),    #spatial /ens dims
-                                       dim(fut.masked.in)[4])) #time dims
+       targ.dim <- dim(target.masked.in)
+       ds.vector =  array(NA,dim=c(targ.dim[1:2], dim(fut.masked.in[[1]])[3]))    #x,y,t (no ens)
        print(paste("dimensions of downscaling output vector:", paste(dim(ds.vector), collapse=" ")))
      }else{
        ds.out <- NULL
@@ -66,17 +66,23 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      #(assumes that all time series will be of same length)
      #Also keep in mind: both the time windows and the kfold masks are, technically, 
      #time masks. You're just doing a compression step immediately after one but not the other.
-     targ.dim <- dim(target.masked.in)
+     
+     #Grab time indices for predictor datasets
+     print('train target:')
+     print(summary(target.masked.in))
+     print(length(target.masked.in))
+     #stop("examine input")
+     
      for(i.index in 1:targ.dim[1]){  #Most of the time, this will be 1
        for(j.index in 1:targ.dim[2]){
-         if(sum(!is.na(target.masked.in[i.index,j.index,,]))!=0 &&
-              sum(!is.na(hist.masked.in[i.index,j.index,,]))!=0 &&
-              sum(!is.na(fut.masked.in[i.index,j.index,,]))!=0){
+         if(sum(!is.na(target.masked.in[i.index,j.index,]))!=0 &&
+              sum(!is.na(hist.masked.in[[1]][i.index,j.index,]))!=0 &&
+              sum(!is.na(fut.masked.in[[1]][i.index,j.index,]))!=0){ #For predictors, use first entry as a proxy for NAs across the board
            message(paste("Begin processing point with i = ", i.index, "and j =", j.index))
-           #print(summary(as.vector(fut.masked.in[i.index, j.index,,])))
-           loop.temp <- LoopByTimeWindow(train.predictor = hist.masked.in[i.index, j.index,,], 
-                                         train.target = target.masked.in[i.index, j.index,,], 
-                                         esd.gen = fut.masked.in[i.index, j.index,,], 
+           #First, determine the indices of interest for the two predictor datasets
+           loop.temp <- LoopByTimeWindow(train.predictor = lapply(hist.masked.in, '[', i.index, j.index,),#hist.masked.in[i.index, j.index,], 
+                                         train.target = target.masked.in[i.index, j.index,], 
+                                         esd.gen = lapply(fut.masked.in, '[', i.index, j.index,), 
                                          ds.var=ds.var,
                                          mask.struct = mask.list, 
                                          create.ds.out=create.ds.out, downscale.fxn = ds.method, downscale.args = downscale.args, 

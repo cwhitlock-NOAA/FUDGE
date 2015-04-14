@@ -30,7 +30,8 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
     }
   }
   #Create vector to store all var values
-  all.dim <- c(dim.list[[1]][1:3], dim.list[[1]][3]) # No longer adding a var/ensemble dimension
+  all.dim <- c(dim.list[[1]][1:3]) # No longer adding a var/ensemble dimension
+  print(all.dim)
   data.array <- array(rep(NA, prod(all.dim)), dim=all.dim)
   #Then, once the dimensions are determined, look over the files and obtain the vars, 
   #slotting them into the relevant bits one by one. 
@@ -44,25 +45,25 @@ ReadMultiVars <- function(file.prefix, file.suffix, blank.filename, var.list, di
                     point="",                     #The part of the x,y coordinate scheme that can be deduced. Not implemented yet.
                     p.rep=""                      #Physics rip used. Not used yet, and might not get used at all.
   )
-  data.list <- rep(list(data.array), lenth(data.list))
+  data.list <- rep(list(data.array), length(var.list))
   names(data.list) <- unlist(var.list)
   for(v in 1:length(var.list)){
     var=var.list[[v]]
     if(verbose){print(paste("Reading in var", var))}
     if(v==1){
-      out.list <- ReadNC(nc.list[[v]], var=var, dim=dim, add.ens.dim=add.ens.dim)
-      data.array[,,v,] <- out.list$clim.in
+      out.list <- ReadNC(nc.list[[v]], var=var, dim=dim) #No longer adding ensemble dimension
+      data.list[[v]] <- out.list$clim.in
       att.table$var.units[[v]] <- ifelse(out.list$units$hasatt, 
                                          out.list$units$value, "")
     }else{
-      temp.list <- ReadNC(nc.list[[v]], var=var, dim='none', add.ens.dim=add.ens.dim)
-      data.array[,,v,] <- temp.list$clim.in
+      temp.list <- ReadNC(nc.list[[v]], var=var, dim='none')
+      data.list[[v]] <- temp.list$clim.in
       att.table$var.units[[v]] <- ifelse(temp.list$units$hasatt, 
                                          temp.list$units$value, "")
     }
   }
   #Assign and exist
-  out.list$clim.in <- data.array
+  out.list$clim.in <- data.list
   out.list$att.table <- att.table
   return(out.list)
 }

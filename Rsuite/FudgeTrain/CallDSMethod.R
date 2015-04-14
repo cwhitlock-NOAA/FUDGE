@@ -71,23 +71,31 @@ callMulti.lm <- function(pred, targ, new, args=NA){
   ##Current assumption is data in var,t order coming in, 
   ##and that getst transposed later
   #Okay, so what happens first?
-  test.prod <- as.data.frame(cbind(targ,t(pred)))
+#     save(file="~/Code/testing/test_out.R", list=c('pred', 'targ', 'new'))
+#     stop('examine current results and figure out what they are coming from')
+#   test.prod <- as.data.frame(cbind(targ,t(pred)))
+    test.list <- c('target'=list(targ), pred)
+    test.prod <- data.frame(test.list)
   lm.model <- lm(data=test.prod)
-  lm.fxn <- function(coefs, new.data, args=NA){
-    #Short lm function - takes a length of coefficents
-    #equal to the number of vars present, 
-    #and the predictor with dim of var, timelevels
-    #outputtting a single vec of length timelevels
-    coef.len <- length(coefs)
-    coef.vec <- mapply(prod, new.data, coefs[2:coef.len])
-    dim(coef.vec) <- dim(new.data) #Beforehand, put in var, time order
-    out <- coefs[1] + apply(coef.vec, 2, sum) #apply accros vars
-    return(out)
-  }
+#   lm.fxn <- function(coefs, new.data, args=NA){
+#     #Short lm function - takes a length of coefficents
+#     #equal to the number of vars present, 
+#     #and the predictor consisting of a list of length vars
+#     #with var data in each list
+#     #outputtting a single vec of length timelevels
+#     coef.len <- length(coefs)
+#     coef.vec <- mapply(prod, new.data, coefs[2:coef.len])
+#     print(summary(coef.vec))
+#     #dim(coef.vec) <- dim(new.data) #Beforehand, put in var, time order
+#     out <- coefs[1] + apply(coef.vec, 2, sum) #apply accros vars
+#     return(out)
+#   }
 #  temp.out <- lm.fxn(coef(lm.model), new)
 #   save(file="~/Code/testing/test_out.R", list=c('temp.out', 'lm.model', 'pred', 'targ', 'new'))
 #   stop('examine current results and figure out what they are coming from')
-  return(lm.fxn(coef(lm.model), new))
+   # out <- predict.lm(lm.model, newdata=new)
+    #   save(file="~/Code/testing/test_out.R", list=c('temp.out', 'lm.model', 'pred', 'targ', 'new', 'out'))
+  return(predict.lm(lm.model, newdata=new))
 }
 
 # callMulti.lm <- function(pred, targ, new, args, ds.lengths){

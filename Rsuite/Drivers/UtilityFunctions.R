@@ -91,7 +91,7 @@ adapt.pp.input <- function(mask.list=list('na'), pr_opts=list('na')){
   return(list('pre_ds'=pre_ds, 'post_ds'=post_ds))  
 }
 
-apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE){
+apply.any.mask <- function(data, mask, dim.apply=NA, na.rm=FALSE, verbose=FALSE){ #switched 'mask' and 'data' in arg
   #Applies any mask to an array
   #array is assumed to be in x,y,t order, with additional dims between
   #y and t
@@ -140,7 +140,7 @@ apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
       }
     }else if(dim.apply=='spatial'){
       dim.spatial <- mask.dim
-      if(sum(mask.dim==data.dim[1:2])!=2){
+      if(sum(dim.spatial==data.dim[1:2])!=2){
         stop("mask dim error; try again")
       }else{
         result <- as.vector(data) * as.vector(mask) #x,y,ens/var,t order (if ens exists)
@@ -150,5 +150,10 @@ apply.any.mask <- function(mask, data, dim.apply=NA, na.rm=FALSE, verbose=FALSE)
     }
   }
   return(result)
+}
+
+remove.missvals <- function(data){
+  #Removes missing values from an array (presumed 1-d)
+  return(data[!is.na(data)])
 }
 
