@@ -114,7 +114,7 @@ LoadLib(ds.method)
 #print(fakevar)
 
 message("Setting downscaling method information")
-SetDSMethodInfo(ds.method)
+SetDSMethodInfo(ds.method, predictor.vars)
 message("Checking downscaling arguments")
 QCDSArguments(k=k.fold, ds.method = ds.method, args=args)
 #Check for writable output directory 
@@ -345,7 +345,8 @@ out.file <- paste(output.dir,"/", out.filename,sep='')
 ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
                           dim.list=c(list.target$dim, list.fut$dim),
                           var.data=c(list.target$vars, list.fut$vars),
-                          prec=list.target$att_table[[target.var]]$prec,
+                          #prec=list.target$att_table[[target.var]]$prec,
+                          prec='double',
                           units=list.target$att_table[[target.var]]$units,
                           lname=paste('Downscaled ',"dummy variable until we figure out what needs to go in here for metadata",sep=''), #list.fut$long_name$value
                           cfname=list.target$att_table[[target.var]]$standard_name, verbose=TRUE 

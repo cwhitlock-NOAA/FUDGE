@@ -121,6 +121,10 @@ WriteNC <-  function(filename,data.array,var.name,
         var.dimlist <- NULL
       }else{
         for(d in 1:length(var.dim)){
+          #Okay...there's CLEARLY something in here that's not getting set with bnds
+          #Investigating this on 4-15
+          #4-15: Normally, no dimvar is created; if you set the longname att, that is not the case. 
+          #Implies more standardization in input files? Maaaybe.
           #print(var.dim[[d]]) #Blame R's need to return all functions as elements of a list.
           var.dimlist[[d]] <- switch(as.character(var.dim[d]), 
                                      "bnds"=bnds, 
@@ -170,11 +174,14 @@ WriteNC <-  function(filename,data.array,var.name,
       }
     }
     if(verbose) { print("cloning attributes") }
-    for (i in 1:length(dim.list)){
-      dim.name <- names(dim.list)[i]
-      orig.file <- attr(dim.list[[i]], "filename")
+    dim.exclude <- c("bnds")    #List of dimensions not to copy atts from
+    dim.index <- !(names(dim.list)%in%dim.exclude)
+    dim.names <- dim.list[[dim.index]]
+    for (i in 1:length(dim.names)){
+      dim.name <- dim.names[i]
+      orig.file <- attr(dim.list[[dim.name]], "filename")
       if(!is.null(orig.file)){
-        dim.name <- names(dim.list)[i]
+        #dim.name <- names(dim.list)[i] #commented this out; prev.indexed by i
         #This may not work if you name the arguments present. Check on that?
         nc.copy.atts(nc_open(orig.file), dim.name, nc.obj, dim.name, c("_FillValue", "FillValue", "_missval"))
       }else{

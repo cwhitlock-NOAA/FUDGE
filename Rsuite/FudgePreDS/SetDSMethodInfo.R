@@ -8,7 +8,7 @@
 #' @param ds.method: a string representation of the downscaling method to be used. 
 #' 
 
-SetDSMethodInfo <- function(ds.method){
+SetDSMethodInfo <- function(ds.method, predictor.vars=list('na')){
   message(ds.method)
   switch(ds.method, 
                 "simple.lm" = setSimpleLM(),
@@ -29,6 +29,13 @@ SetDSMethodInfo <- function(ds.method){
          'multi.lm' = setMultiLM(),
                 ReturnDownscaleError(ds.method))
   #Function returns nothing, just sets globals
+  
+  #But does run a couple extra checks to make sure that there are no gross mismatches
+  if(!supports.multivariate && length(predictor.vars) > 1){
+    stop(paste("Error in SetDSMethodInfo: method", ds.method, "does not support multiple predictor vars,", 
+               "but vars", paste(predictor.vars, collapse=" "), "were provided!"))
+  }
+  #At the moment, do not require a specific check for supporting univariate methods, since EVERYTHING should support that
 }
 
 ReturnDownscaleError <- function(ds.method){
@@ -45,6 +52,8 @@ setSimpleLM <- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setCDFt<- function(){
@@ -56,6 +65,8 @@ setCDFt<- function(){
   train.and.use.same <<- TRUE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("npas", "dev")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setSimple.Bias.Correct <- function(){
@@ -68,6 +79,8 @@ setSimple.Bias.Correct <- function(){
   #In hindsight, I am not even sure that this applies here. 
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("ds.method", "qc.method")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setGeneral.Bias.Correct <- function(){
@@ -81,6 +94,8 @@ setGeneral.Bias.Correct <- function(){
   #In hindsight, I am not even sure that this applies here. 
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("ds.method", "qc.method", "compare.factor")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setNothing <- function(){
@@ -92,6 +107,8 @@ setNothing <- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setBiasCorrection <- function(){
@@ -103,6 +120,8 @@ setBiasCorrection <- function(){
   train.and.use.same <<- TRUE 
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("size", "flip")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setEquiDistant <- function(){
@@ -114,6 +133,8 @@ setEquiDistant <- function(){
   train.and.use.same <<- TRUE 
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("size")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setChangeFactor <- function(){
@@ -125,6 +146,8 @@ setChangeFactor <- function(){
   train.and.use.same <<- TRUE 
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("size")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setDeltaSD<- function(){
@@ -136,6 +159,8 @@ setDeltaSD<- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c("OPT")
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- FALSE
 }
 
 setMultiLM <- function(){
@@ -147,4 +172,6 @@ setMultiLM <- function(){
   train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
   # What are the arguments to the args() parameter that are accepted? 
   names.of.args <<- c()
+  #Is it possible to use multiple predictors with this method?
+  supports.multivariate <<- TRUE
 }
