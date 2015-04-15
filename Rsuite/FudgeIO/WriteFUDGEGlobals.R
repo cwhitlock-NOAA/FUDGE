@@ -48,9 +48,7 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
                           " method(s) before downscaling", sep="")
   }
   if(is.post.ds.adjust){
-    print(post.ds.adjustments)
     post.methods <- lapply(post.ds.adjustments, '[[', "type")
-    print(post.methods)
     if(!is.pre.ds.adjust){
       comment.info <- paste(comment.info, "adjusted with the", convert.list.to.string(post.methods), "method(s) after downscaling")
     }else{
@@ -112,7 +110,6 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
     }else{
       qc.string = ""
     }
-    print(qc.string)
     info <- paste(info, "Arguments used in adjustment functions", qc.string)
     if(is.pre.ds.adjust){
       pre.args <- paste(lapply(pre.ds.adjustments, '[[', "pp.args"))
@@ -121,7 +118,6 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
       pre.args <- gsub('list', "", pre.args)
       pre.string <- convert.list.to.string(paste(pre.methods, pre.args, sep=":", collapse=","))
       info <- paste(info, "before downscaling",  ": ", pre.string, sep="")
-      print(paste('pre string:', pre.string))
     }
     if(is.post.ds.adjust){
       if(is.pre.ds.adjust){
@@ -135,7 +131,6 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
       post.args <- gsub('list', "", post.args)
       post.string <- convert.list.to.string(paste(post.methods, post.args, sep=":", collapse=","))
       info <- paste(info, "after downscaling:", post.string)
-      print(paste('post_string:', post.string))
     }
     info <- paste(info, ";")
   }

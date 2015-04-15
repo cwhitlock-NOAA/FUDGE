@@ -6,7 +6,7 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
                         #                         s5.adjust=FALSE, s5.method='totally.fake', s5.args = NULL, 
                         #                         create.qc.mask=FALSE, create.adjust.out=FALSE
                         s3.instructions=list(onemask=list('na')),
-                        s5.instructions=list(onemask=list('na')), create.qc.mask=FALSE){
+                        s5.instructions=list(onemask=list('na')), create.qc.mask=FALSE, verbose=FALSE){
   #' Function to loop through spatially,temporally and call the Training guts.
   #' @param target.masked.in, hist.masked.in, fut.masked.in: The historic target/predictor and 
      #' future predictor datasets to which spatial masks have been applied earlier
