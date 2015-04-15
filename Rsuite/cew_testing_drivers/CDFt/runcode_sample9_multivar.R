@@ -58,7 +58,7 @@ target.indir_1 <- paste0('/archive/esd/PROJECTS/DOWNSCALING//OBS_DATA/GRIDDED_OB
 #------------- method name k-fold specs-----------------------#
         ds.method <- 'CDFt' 
 #ds.method <- 'multi.lm'
-	ds.experiment <- paste0('RRtxp1-', ds.method, '-C34atTestL01K00')
+	ds.experiment <- paste0('RRtxp1-', ds.method, '-C34atTest2L01K00')
 	k.fold <- 0 
 	
 #-------------- output -----------------------#
