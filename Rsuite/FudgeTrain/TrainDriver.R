@@ -1,13 +1,12 @@
-TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var='tasmax', 
+TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var='tasmax', att.table=NA,
                         mask.list, ds.method=NULL, k=0,  
                         create.ds.out=TRUE,
                         time.steps=NA, istart = NA,loop.start = NA,loop.end = NA, downscale.args=NULL, 
                         ds.orig=NULL, #Correcting a dimension error
-                        #                         s5.adjust=FALSE, s5.method='totally.fake', s5.args = NULL, 
-                        #                         create.qc.mask=FALSE, create.adjust.out=FALSE
                         s3.instructions=list(onemask=list('na')),
-                        s5.instructions=list(onemask=list('na')), create.qc.mask=FALSE, verbose=FALSE){
-  #' Function to loop through spatially,temporally and call the Training guts.
+                        s5.instructions=list(onemask=list('na')), 
+                        create.qc.mask=FALSE, verbose=FALSE){
+  #' Function to loop through spatially,temporally and call the training and downscaling functions.
   #' @param target.masked.in, hist.masked.in, fut.masked.in: The historic target/predictor and 
      #' future predictor datasets to which spatial masks have been applied earlier
      #' in the main driver function
@@ -15,14 +14,16 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
      #' time series to be applied to the time windows; returned from (insert link)
      #' TimeMaskQC.
      #' @param ds.method: name of the downscaling method to be applied to the data.
-     #' Can currently accept simple.lm, a simple linear model, or CDFt.
+     #' List of currently available methods located at: (insert link)
+     #' @param ds.var: The target variable being downscaled. 
+     #' @param att.table: The attribute table of the 
      #' @param k: The number of k-fold cross-validation steps to be performed. If k > 1, 
-     #' kfold masks will be generated during TrainDriver.
-     #' ---Optional arguments for use in debugging---
-     #' @param  loop.start: J loop start index
-     #' @param loop.end: J loop end index
-     #' @param time.steps: the # time steps; defaults to NA
-     #' @param istart: 
+     #' kfold masks will be generated during TrainDriver. Currently only accepts k=0
+     #' @param 
+     #' 
+     #' Note: Many of the other parameters are from previous attempts to make the training functions
+     #' more general, and capable of applying section 5 and section 3 adjustments to other data; 
+     #' that track has been abandoned, but might be picked up later.
      
      
      # Initialize ds.vector 
@@ -78,6 +79,7 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
                                          train.target = target.masked.in[i.index, j.index,], 
                                          esd.gen = lapply(fut.masked.in, '[', i.index, j.index,), 
                                          ds.var=ds.var,
+                                         att.table=att.table,
                                          mask.struct = mask.list, 
                                          create.ds.out=create.ds.out, downscale.fxn = ds.method, downscale.args = downscale.args, 
                                          kfold=k, kfold.mask=kfold.mask, graph=FALSE, masklines=FALSE, 
@@ -85,11 +87,12 @@ TrainDriver <- function(target.masked.in, hist.masked.in, fut.masked.in, ds.var=
                                          #s5.adjust=s5.adjust, s5.method=s5.method, s5.args = s5.args, 
                                          s3.instructions=s3.instructions, s3.adjust=s3.adjust,
                                          s5.instructions=s5.instructions, s5.adjust=s5.adjust,
-                                         create.qc.mask=create.qc.mask, create.adjust.out=create.adjust.out
+                                         create.qc.mask=create.qc.mask
            )
            #save(file="~/Code/testing/test_out.R", save='loop.temp')
            #stop("wanted to look more")
-           if (create.ds.out || create.adjust.out){
+           #Previously create.adjust.out here; not needed anymore
+           if (create.ds.out){
              #If we are not in the "write only the qc data" case
              ds.vector[i.index, j.index,] <- loop.temp$downscaled
            }

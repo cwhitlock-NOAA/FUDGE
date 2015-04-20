@@ -2,7 +2,7 @@
 rm(list=ls())
 
 #--------------predictor and target variable names--------#
-	predictor.vars <- list('tasmax','tasmin') 
+	predictor.vars <- list('tasmax') 
 	target.var <- 'tasmax'
 #--------------grid region, mask settings----------#
         grid <- 'US48' 

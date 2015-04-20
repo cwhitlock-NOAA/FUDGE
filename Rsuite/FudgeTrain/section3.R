@@ -31,16 +31,14 @@ callS3Adjustment<-function(s3.instructions=list('na'),
                    hist.pred = NA, 
                    hist.targ = NA, 
                    fut.pred = NA, 
-                           hist.pred.atts=NA,
-                           fut.pred.atts=NA,  
-                           hist.targ.atts=NA,
+                           att.list=NA,
                    create.qc.mask=FALSE, create.adjust.out=FALSE, 
                    s5.instructions=list('na')){
   #Create list of variables that will not change with iteration
   #input<- list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred)
   #Define data that will change with iteration
   adjusted.list <- list(input=list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred, 
-                                   att.list=list('fut.pred'=fut.pred.atts, 'hist.pred'=hist.pred.atts, 'hist.targ'=hist.targ.atts)), 
+                                   'att.list'=att.list), 
                         s5.list=s5.instructions)
   for(element in 1:length(s3.instructions)){
     test <- s3.instructions[[element]]

@@ -25,7 +25,7 @@
 #' TODO: Find better way to initialize the output storage vectors
 #' TODO: Seriously, THERE HAS GOT TO BE A LESS COMPLEX WAY
 
-CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=NULL, ds.var='irrelevant'){
+CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=NULL, ds.var='irrelevant', att.table=NA){
   #  library(CDFt)
   #print(paste("start time:", date()))
   out <- switch(ds.method, 
@@ -37,7 +37,6 @@ CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=N
                 "EDQM" = callEDQMv2(train.target, train.predict, esd.gen, args), 
                 "CFQM" = callCFQMv2(train.target, train.predict, esd.gen, args), 
                 "DeltaSD" = callDeltaSD(train.target, train.predict, esd.gen, args), #, ds.var)
-                "QMAP" = QMAP(train.target, train.predict, esd.gen, args),
                 "multi.lm"=callMulti.lm(train.predict, train.target, esd.gen, args),
                 ReturnDownscaleError(ds.method))
   #print(paste("stop time:", date()))
@@ -49,52 +48,15 @@ ReturnDownscaleError <- function(ds.method){
   stop(paste("Downscale Method Error: the method", ds.method, "is not supported for FUDGE at this time."))
 }
 
-callSimple.lm <- function(pred, targ, new, args){
-  #Creates a simple linear model without a cross-validation step. 
-  #Mostly used to check that the procedure is working
-  lm.results <- lm(targ ~ pred)
-  lm.intercept <- lm.results$coefficients[1]
-  lm.slope <- lm.results$coefficients[2]
-  if(is.na(lm.intercept) || is.na(lm.slope) ){
-    warning(paste("simple.lm warning: intercept was", lm.intercept, 
-                  "and intercept was", lm.slope, ": therefore no ESD values will be generated."))
-  }
-  trained.function<-function(x){
-    return( lm.intercept + unlist(x)*lm.slope)  # + unlist(x)*lm.slope2) #Messily edited multivariate fxn? I don't remember this.
-  }
-  #insert save command for saving 
-  #May be rendered obsolete if going to a model that uekeeps everything in memory and trains each time.
-  return(trained.function(new))
-}
-
 callMulti.lm <- function(pred, targ, new, args=NA){
-  ##Current assumption is data in var,t order coming in, 
-  ##and that getst transposed later
-  #Okay, so what happens first?
-#     save(file="~/Code/testing/test_out.R", list=c('pred', 'targ', 'new'))
-#     stop('examine current results and figure out what they are coming from')
-#   test.prod <- as.data.frame(cbind(targ,t(pred)))
+  #Calls R's LM function on one or more variables present
+  #in the current data
     test.list <- c('target'=list(targ), pred)
     test.prod <- data.frame(test.list)
   lm.model <- lm(data=test.prod)
-#   lm.fxn <- function(coefs, new.data, args=NA){
-#     #Short lm function - takes a length of coefficents
-#     #equal to the number of vars present, 
-#     #and the predictor consisting of a list of length vars
-#     #with var data in each list
-#     #outputtting a single vec of length timelevels
-#     coef.len <- length(coefs)
-#     coef.vec <- mapply(prod, new.data, coefs[2:coef.len])
-#     print(summary(coef.vec))
-#     #dim(coef.vec) <- dim(new.data) #Beforehand, put in var, time order
-#     out <- coefs[1] + apply(coef.vec, 2, sum) #apply accros vars
-#     return(out)
-#   }
-#  temp.out <- lm.fxn(coef(lm.model), new)
-#   save(file="~/Code/testing/test_out.R", list=c('temp.out', 'lm.model', 'pred', 'targ', 'new'))
-#   stop('examine current results and figure out what they are coming from')
-   # out <- predict.lm(lm.model, newdata=new)
-    #   save(file="~/Code/testing/test_out.R", list=c('temp.out', 'lm.model', 'pred', 'targ', 'new', 'out'))
+#     save(file="~/Code/test_multivar.R", list=c('lm.model'))
+#     print(paste("save.file:~/Code/test_multivar.R"))
+#     stop('examine lm.model')
   return(predict.lm(lm.model, newdata=new))
 }
 
@@ -151,131 +113,9 @@ callSimple.bias.correct <- function(pred, targ, new, args){
   #applying the mean difference between the
   #predictor and target over the time series
   #to the esd.gen dataset to give downscaled data.
-  bias <- mean(pred-targ)
-  new.targ <- new-bias
+  bias <- mean(unlist(pred)-targ)
+  new.targ <- unlist(new)-bias
   return(new.targ)
-}
-
-callGeneral.Bias.Corrector <- function(pred, targ, new, args){
-  #Calls two downscaling methods: one used as a source of downscaling
-  #values, the other used as a check against those values. Those values
-  #are then compared; if the values are sufficiently similar to each other, 
-  #the downscaled values are used; otherwise, the qc values are used. Ideally, 
-  #the method used for QC should be less computationally-expensive than the 
-  #method used for downscaling. 
-  qc.method <- args$qc.method
-  args$qc.method <- NULL
-  ds.method <- args$ds.method
-  args$ds.method <- NULL
-  if(!is.null(args$compare.factor)){
-    correct.factor <- args$compare.factor
-    args$compare.factor <- NULL
-  }else{
-    correct.factor = 0.5
-  }
-  if(length(args)!=0) sample.args=args else sample.args=NULL
-  ds.vals <- CallDSMethod(ds.method=ds.method, pred, targ, new, sample.args)
-  qc.vals <- CallDSMethod(ds.method=qc.method, pred, targ, new, sample.args)
-  out.vals <- ifelse( (abs(ds.vals-qc.vals) < correct.factor), yes=ds.vals, no=qc.vals )
-  return(out.vals)
-}
-
-callBiasCorrection <- function(LH, CH, CF, args){
-  #'Performs a bias correction adjustment
-  # LH: Local Historical (a.k.a. observations)
-  # CH: Coarse Historical (a.k.a. GCM historical)
-  # CF: Coarse Future (a.k.a GCM future)
-  # args: A vector of arguments to the function.
-  size <- length(CF)
-  prob<-seq(from=1/size, by=1, to=size)/size
-  #check the order preservation status
-    in.sort <- order(CF)
-    CF.out <- CF[in.sort]
-  # QM Change Factor
-  SDF<-quantile(LH,ecdf(CH)(quantile(CF.out,prob)),names=FALSE)
-  #CEW: creation of historical values commented out for the moment
-  #SDH<-quantile(LH,ecdf(CH)(quantile(CH,prob)),names=FALSE)
-  #SDoutput<-list("SDF"=SDF,"SDH"=SDH)
-    SDF <- SDF[order(in.sort)]
-  return (SDF)
-}
-
-callEquiDistant <- function(LH, CH, CF, args){
-  #'Performs an equidistant correction adjustment
-  # first define vector with probabilities [0,1]
-  # LH: Local Historical (a.k.a. observations)
-  # CH: Coarse Historical (a.k.a. GCM historical)
-  # CF: Coarse Future (a.k.a GCM future)
-  #'Cites Li et. al. 2010
-  size <- length(CF)
-  prob<-seq(from=1/size, by=1, to=size)/size
-  
-  #check order preservation status
-    in.sort <- order(CF)
-    CF.out <- CF[in.sort]
-
-  #Create numerator and denominator of equation
-  #First scale with local historical and reorder
-  temporal<-quantile(LH,(ecdf(CF)(quantile(CF,prob))),names=FALSE)
-  
-  #And then scale with climate historical
-  temporal2<-quantile(CH,(ecdf(CF)(quantile(CF,prob))),names=FALSE)
-  
-  # EQUIDISTANT CDF (Li et al. 2010)
-  SDF<-CF.out + temporal-temporal2
-  #CEW creation of downscaled historical values turned off for the moment
-  #SDH<-CH + temporal-temporal2
-  #SDoutput<-list("SDF"=SDF,"SDH"=SDH)
-
-    SDF <- SDF[order(in.sort)] 
-  return (SDF)
-}
-
-callChangeFactor <- function(LH, CH, CF, args){
-  #'The script uses the Quantile Mapping Change Factor
-  #'(Ho, 2012) CDF to downscale coarse res. climate variables
-  #'@param LH: Local Historical (a.k.a. observations)
-    #'@param CH: Coarse Historical (a.k.a. GCM historical)
-    #'@param CF: Coarse Future (a.k.a GCM future)
-    #'@param args: named list of arguments for the function
-    
-    #Edit 3-2-2014 to add opt to sort by any vector
-    if(!is.null(args$sort)){
-      #can be one of 'future' or 'historical'
-      sort.opt <- args$sort
-      if(sort.opt=='future'){
-        sort.opt <- 'CF'
-      }else if(sort.opt=='historical'){
-        sort.opt <- 'CH'
-      }else if(sort.opt=='target'){
-        sort.opt <- 'LH'
-      }else{
-        stop(paste("CFQM Downscaling Error: arg sort was", sort.opt, "not 'future' or 'historical"))
-      }
-    }else{
-      stop(paste("CFQM Downscaling Error: sort not found in args"))
-    }
-    
-    #Edited 1-9-15 to organize vectors by the CF vector
-    size <- length(CF)
-    if(sort.opt=='CF'){
-      sort.vec <- order(CF)
-    }else{
-      if (sort.opt=='CH'){
-        sort.vec <- order(rep(CH, length.out=length(CF)))
-      }else{
-        sort.vec <- order(rep(LH, length.out=length(CF)))
-      }
-      CF <- CF[sort.vec]
-    }
-    # first define vector with probabilities [0,1]
-    prob<-seq(from=1/size, by=1, to=size)/size
-    
-    # QM Change Factor
-    SDF<-quantile(CF,(ecdf(CH)(quantile(LH,prob))),names=FALSE)
-    SDF <- SDF[order(sort.vec)]
-    #print(cor(SDF, sort.vec))
-    return (SDF)
 }
 
 callDeltaSD <- function(LH,CH,CF,args){
@@ -294,6 +134,10 @@ callDeltaSD <- function(LH,CH,CF,args){
     ########################################
     #Note: preferred behavior is to truncate vectors
     #rather than randomly sampling iff too short.
+
+    #Unlist data from its input form
+    CF <- unlist(CF)
+    CH <- unlist(CH)
     
     # Obtain options
     if(!is.null(args$deltatype)){
@@ -319,7 +163,6 @@ callDeltaSD <- function(LH,CH,CF,args){
       #That...raises an interesting question: should the CH vector be truncated as well?
       #Technically, it doesn't need to be for the code to work...
       if(keep.zeroes){
-#        print('keeping zeroes')
         SDF <- LH[1:length(CF)]
           out.temp <- delta.downscale(LH[1:length(CF)], CH, CF, deltatype, deltaop, keep.zeroes)
           SDF[SDF!=0] <- out.temp
@@ -399,6 +242,11 @@ callEDQMv2<-function(LH,CH,CF,args){
   #'Cites Li et. al. 2010
   #' Calls latest version of the EDQM function
   #' as of 12-29
+  
+  #Unlist data from its input form
+  CF <- unlist(CF)
+  CH <- unlist(CH)
+  
   lengthCF<-length(CF)
   lengthCH<-length(CH)
   lengthLH<-length(LH)
@@ -459,6 +307,9 @@ callCFQMv2<-function(LH,CH,CF,args){
   }else{
     stop(paste("CFQM_DF Downscaling Error: sort not found in args"))
   }
+  #Unlist data from its input form
+  CF <- unlist(CF)
+  CH <- unlist(CH)
   
   lengthCF<-length(CF)
   lengthCH<-length(CH)
@@ -490,25 +341,13 @@ callCFQMv2<-function(LH,CH,CF,args){
     temp$sortVec <- rep(as.vector(temp[[sort.opt]]), length.out=maxdim)
     sort.opt <- 'sortVec'
   }
-#   save(list=c('temp'), file="/home/cew/Code/testing/test.save")
-#   stop('problem')
-#   sort.opt <- 'CF'
   #If the longest dim is used, sorting is straightforward
   temp.opt.sorted<-temp[order(temp[[sort.opt]]),] #sorts by sort.opt
-  #temp.opt.sorted <- temp
   #i.e. all temp.LHsorted to temp.CFsorted
   temp.opt.sorted$qLH<-quantile(temp.opt.sorted$LH,prob,na.rm =TRUE) #removed all 1:lengthCF
   temp.opt.sorted$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
   temp.opt.sorted$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE) #Added parenthesis befpre ecdf
   temp<-temp.opt.sorted[order(temp.opt.sorted$index, na.last=TRUE),] #, na.last=FALSE #removed order #temp.opt.sorted$index
-#   temp.CHsorted2<-temp[order(temp$CH),]
-#   
-#   temp.CHsorted2$qLH<-quantile(temp.CHsorted2$LH,prob,na.rm =TRUE)
-#   temp.CHsorted2$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
-#   temp.CHsorted2$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE)
-#   
-#   temp.CFQM2<-temp.CHsorted2[order(temp.CHsorted2$index),]
-#   print("Downscaled data ordered using the Coarse Historical dataset")
   
   SDF<-temp$qCFecdfCHqLH
   print(summary(SDF))
@@ -528,108 +367,6 @@ callCFQMv2<-function(LH,CH,CF,args){
   return(SDF[!is.na(SDF)])
 }
 
-# callCFQMv2<-function(LH,CH,CF,args)
-# {
-#   
-#     if(!is.null(args$sort)){
-#       #can be one of 'future' or 'historical'
-#       sort.opt <- args$sort
-#       if(sort.opt=='future'){
-#         sort.opt <- 'CF'
-#       }else if(sort.opt=='historical'){
-#         sort.opt <- 'CH'
-#       }else if(sort.opt=='target'){
-#         sort.opt <- 'LH'
-#       }else{
-#         stop(paste("CFQM_DF Downscaling Error: arg sort was", sort.opt, "not 'future', 'historical', or 'target'"))
-#       }
-#     }else{
-#       stop(paste("CFQM_DF Downscaling Error: sort not found in args"))
-#     }
-#   lengthCF<-length(CF)
-#   lengthCH<-length(CH)
-#   lengthLH<-length(LH)
-#   
-#   if (lengthCF>lengthCH) maxdim=lengthCF else maxdim=lengthCH
-#   if (lengthCF<lengthCH) mindim=lengthCF else mindim=lengthCH
-#   
-#   lengthCFna<-length(which(!is.na(CF))) # count number of obs without NA
-#   lengthCHna<-length(which(!is.na(CH)))
-#   
-#   if (lengthCFna<lengthCHna) mindimNA=lengthCFna else mindimNA=lengthCHna
-#   
-#   # first define vector with probabilities [0,1]
-#   prob<-seq(0.001,0.999,length.out=lengthCF)
-#   
-#   # initialize data.frame
-#   temp<-data.frame(index=seq(1,maxdim),CF=rep(NA,maxdim),CH=rep(NA,maxdim),LH=rep(NA,maxdim),qLH=rep(NA,maxdim),ecdfCHqLH=rep(NA,maxdim),qCFecdfCHqLH=rep(NA,maxdim))
-#   SDF<-data.frame(index=seq(1,maxdim),CF=rep(NA,maxdim),CH=rep(NA,maxdim),LH=rep(NA,maxdim),CFQM=rep(NA,maxdim))
-#   
-#   #initialize output list
-#   outputlist<-list(CFQM=rep(NA,maxdim))
-#   
-#   
-#   SDF$CF[1:lengthCF]<-temp$CF[1:lengthCF]<-CF
-#   SDF$CH[1:lengthCH]<-temp$CH[1:lengthCH]<-CH
-#   SDF$LH[1:lengthLH]<-temp$LH[1:lengthLH]<-LH
-#   
-#   if (sort.opt=="CF"){
-#     # CHANGE FACTOR ORDERED BY COARSE FUTURE
-#     temp.CFsorted2<-temp[order(temp$CF),]
-#     
-#     temp.CFsorted2$qLH<-quantile(temp.CFsorted2$LH,prob,na.rm =TRUE)
-#     temp.CFsorted2$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
-#     temp.CFsorted2$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE)
-#     
-#     temp.CFQM2<-temp.CFsorted2[order(temp.CFsorted2$index),]
-#     print("Downscaled data ordered using the Coarse Future dataset")
-#     
-#   }
-#   
-#   if (sort.opt=="LH"){
-#     # CHANGE FACTOR ORDERED BY LOCAL HISTORICAL
-#     temp.LHsorted2<-temp[order(temp$LH),]
-#     
-#     temp.LHsorted2$qLH<-quantile(temp.LHsorted2$LH,prob,na.rm =TRUE)
-#     temp.LHsorted2$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
-#     temp.LHsorted2$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE)
-#     
-#     temp.CFQM2<-temp.LHsorted2[order(temp.LHsorted2$index),]
-#     print("Downscaled data ordered using the Local Historical dataset")
-#     
-#     
-#   }
-#   
-#   if (sort.opt=="CH"){
-#     # CHANGE FACTOR ORDERED BY COARSE HISTORICAL
-#     temp.CHsorted2<-temp[order(temp$CH),]
-#     
-#     temp.CHsorted2$qLH<-quantile(temp.CHsorted2$LH,prob,na.rm =TRUE)
-#     temp.CHsorted2$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
-#     temp.CHsorted2$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE)
-#     
-#     temp.CFQM2<-temp.CHsorted2[order(temp.CHsorted2$index),]
-#     print("Downscaled data ordered using the Coarse Historical dataset")
-#     
-#   }
-#   
-#   ### Assign downscaled output to the SDF (Statistically Downscaled Future) list
-#   
-#   SDF$CFQM<-temp.CFQM2$qCFecdfCHqLH
-#   outputlist$CFQM[1:(maxdim-mindimNA)]<-SDF$CFQM[1:mindimNA]
-#   
-#   
-#   if (sort.opt=="CF"){
-#     print(sprintf("Correlation %s",cor(SDF$CFQM[1:mindim],SDF$CF[1:mindim])))}
-#   if (sort.opt=="LH"){
-#     print(sprintf("Correlation %s",cor(SDF$CFQM[1:mindim],SDF$LH[1:mindim])))}
-#   if (sort.opt=="CH"){
-#     print(sprintf("Correlation %s",cor(SDF$CFQM[1:mindim],SDF$CH[1:mindim])))}
-#   
-#   
-#   #return(SDF) or
-#   return(SDF$CFQM)
-# }
 
 callBCQMv2<-function(LH,CH,CF,args){
   #' Calls latest version of BCQM function
@@ -637,7 +374,11 @@ callBCQMv2<-function(LH,CH,CF,args){
   lengthCF<-length(CF)
   lengthCH<-length(CH)
   lengthLH<-length(LH)
-    
+  
+  #Unlist data from its input form
+  CF <- unlist(CF)
+  CH <- unlist(CH)
+  
   if (lengthCF>lengthCH) maxdim=lengthCF else maxdim=lengthCH
   
   # first define vector with probabilities [0,1]
@@ -658,95 +399,4 @@ callBCQMv2<-function(LH,CH,CF,args){
   
   #SDF<-temp.final$qCFecdfCHqLH
   return(temp$qLHecdfCHqCF[!is.na(temp$qLHecdfCHqCF)])
-}
-
-################### Interpolation functions
-interpolate.points <- function(invec, len.outvec, interp.mode='linear'){
-  #Adds or subtracts points in a vector invec, maintaining its
-  #distribution, in order to match an input length, len.outvec.
-  #Is not meant to be called if len.outvec == len(invec)
-  outvec <- rep(NA, len.outvec)
-  
-  if(length(invec) > len.outvec){
-    #If fewer points are needed
-    set.seed(seed=8675309, kind="Mersenne-Twister", normal.kind="Inversion")
-    indices <- sort(sample.int(n=length(invec), len.outvec, replace=FALSE))
-    outvec <- invec[indices]
-  }else{
-    #okay, trying a new technique here: 
-    set.seed(seed=8675309, kind="Mersenne-Twister", normal.kind="Inversion")
-    #Need one set of vectors for every point in the out vector, 
-    #And one set of randomly selected points for the remainder
-    indices <- sort(c( rep(seq(1:length(invec)), floor(len.outvec/length(invec)) ), 
-                       sample.int(n=(length(invec)), size=(len.outvec%%length(invec)), replace=FALSE)))
-    outvec <- invec[indices]
-  }
-  return(outvec)
-}
-
-interp.points <- function(startpoint, endpoint, len.out, mode){
-  #Linera interpolation of len.outvalues between two points, including the starting point
-  if(mode=='linear'){
-    return(startpoint + ((endpoint-startpoint)/(len.out-1))*seq(from=0, by=1, to=(len.out-1)))
-  }else{
-    return(c(startpoint, rep(endpoint, len.out-1)))
-  }
-  #return(approx(x=c(startpoint, endpoint), y=NULL, n=len.out, method='linear')$x)
-}
-
-QMAP<-function(LH,CH,CF,args){
-  lengthCF<-length(CF)
-  lengthCH<-length(CH)
-  lengthLH<-length(LH)
-  
-  
-  if (lengthCF>lengthCH) maxdim=lengthCF else maxdim=lengthCH
-  
-  # first define vector with probabilities [0,1]
-  prob<-seq(0.001,0.999,length.out=lengthCF)
-  
-  # initialize data.frame
-  temp<-data.frame(index=seq(1,maxdim),CF=rep(NA,maxdim),CH=rep(NA,maxdim),LH=rep(NA,maxdim),qLH=rep(NA,maxdim),ecdfCHqLH=rep(NA,maxdim),qCFecdfCHqLH=rep(NA,maxdim))
-  SDF<-data.frame(index=seq(1,maxdim),CF=rep(NA,maxdim),CH=rep(NA,maxdim),LH=rep(NA,maxdim),CFQM=rep(NA,maxdim),BCQM=rep(NA,maxdim),EDQM=rep(NA,maxdim),ERQM=rep(NA,maxdim))
-  
-  SDF$CF[1:lengthCF]<-temp$CF[1:lengthCF]<-CF
-  SDF$CH[1:lengthCH]<-temp$CH[1:lengthCH]<-CH
-  SDF$LH[1:lengthLH]<-temp$LH[1:lengthLH]<-LH
-  
-  # CHANGE FACTOR QMAP
-  temp.CFsorted2<-temp[order(temp$CF),]
-  temp.CFsorted2$qLH<-quantile(temp.CFsorted2$LH,prob,na.rm =TRUE)
-  temp.CFsorted2$ecdfCHqLH<-ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE))
-  temp.CFsorted2$qCFecdfCHqLH<-quantile(temp$CF,ecdf(temp$CH)(quantile(temp$LH,prob,na.rm =TRUE)),na.rm =TRUE)
-  temp.CFQM2<-temp.CFsorted2[order(temp.CFsorted2$index),]
-  #DEC 29 2014 Coarse Future and the SD output are now highly correlated
-  
-  
-  ###### BIAS CORRECTION QMAP (~CDFt)
-  temp.CFsorted<-temp[order(temp$CF),]
-  temp.CFsorted$qCF<-quantile(temp.CFsorted$CF,prob,na.rm =TRUE)
-  temp.CFsorted$ecdfCHqCF<-ecdf(temp$CH)(quantile(temp$CF,prob,na.rm =TRUE))
-  temp.CFsorted$qLHecdfCHqCF<-quantile(temp$LH,ecdf(temp$CH)(quantile(temp$CF,prob,na.rm =TRUE)),na.rm =TRUE)
-  temp.BCQM<-temp.CFsorted[order(temp.CFsorted$index),]
-  
-  ##### EQUIDISTANT QMAP
-  
-  temp.CFsorted$ecdfCFqCF<-ecdf(temp$CF)(quantile(temp$CF,prob,na.rm =TRUE))
-  
-  temp.CFsorted$qLHecdfCFqCF<-quantile(temp$LH,ecdf(temp$CF)(quantile(temp$CF,prob,na.rm =TRUE)),na.rm =TRUE)
-  temp.CFsorted$qCHecdfCFqCF<-quantile(temp$CH,ecdf(temp$CF)(quantile(temp$CF,prob,na.rm =TRUE)),na.rm =TRUE)
-  temp.CFsorted$EquiDistant<-temp.CFsorted$CF+ temp.CFsorted$qLHecdfCFqCF-temp.CFsorted$qCHecdfCFqCF
-  temp.EDQM<-temp.CFsorted[order(temp.CFsorted$index),]
-  
-  ##### EQUIRATIO QMAP
-  temp.CFsorted$EquiRatio<-temp.CFsorted$CF* (temp.CFsorted$qLHecdfCFqCF/temp.CFsorted$qCHecdfCFqCF)
-  temp.ERQM<-temp.CFsorted[order(temp.CFsorted$index),]
-  
-  ### Assign downscaled output to the SDF (Statistically Downscaled Future) list
-  
-  SDF$CFQM<-temp.CFQM2$qCFecdfCHqLH
-  SDF$BCQM<-temp.BCQM$qLHecdfCHqCF
-  SDF$EDQM<-temp.EDQM$EquiDistant
-  SDF$ERQM<-temp.ERQM$EquiRatio
-  return(SDF$CFQM)
 }

@@ -28,10 +28,7 @@ callS5Adjustment<-function(s5.instructions=list('na'),
                    hist.targ = NA, 
                    fut.pred = NA, 
                    create.qc.mask=FALSE, create.adjust.out=FALSE){
-#   function(qc.test, data, hist.pred=NULL, hist.targ=NULL, fut.pred=NULL, var='tasmax', 
-#                      qc.data=NULL, qc.mask=NULL){
-#  element.list <- list( list("s5.method" = s5.method, "s5.args" = s5.args, 
- #                      'create.qc.mask' = create.qc.mask, 'create.adjust.out' = create.adjust.out))
+  
   input<- list('hist.pred' = hist.pred, 'hist.targ' = hist.targ, 'fut.pred' = fut.pred, 'data.atts'=data.atts)
   qc.mask <- NULL  #If no mask generated, will keep being null forever
   adjusted.output <- list("ds.out" = data, "qc.mask" = qc.mask)
@@ -74,30 +71,34 @@ callSdev <- function(test, input, adjusted.output){
   return(out.list)
 }
 
-callSBCorr <- function(test, input, adjusted.output){
+callSBCorr <- function(test, input, adjusted.output, verbose=FALSE){
   #Outputs a mask where NA values show flagged data and 
   #1's show good data
-  #Set corrective error factor:
-  print("entering simple bias correction func")
+  #'Assumes one predictor variable and one target variable
+  
+  if(verbose){print("entering simple bias correction function")}
   if(!is.null(test$qc_args$toplim) && !is.null(test$qc_args$botlim)){
     toplim <- test$qc_args$toplim
     botlim <- test$qc_args$botlim
   }else{
     stop("Section 5 Adjustment Error: Arguments toplim and botlim are not present for the SBiasCorr function. Please check your XML.")
   }
+  #Unlist the predictors
+  hist.pred <- unlist(input$hist.pred)
+  fut.pred <- unlist(input$fut.pred)
+#       save(file="~/Code/test_multivar.R", list=c('test', 'input', 'adjusted.output', 'hist.pred', 'fut.pred'))
+#       print(paste("save.file:~/Code/test_multivar.R"))
+#       stop('examine input results')
     #compute difference for all time values
-    hist.bias <- mean(input$hist.pred-input$hist.targ)
-    fut.targ <- input$fut.pred-hist.bias
+    hist.bias <- mean(hist.pred-input$hist.targ)
+    fut.targ <- fut.pred-hist.bias
   mask.vec <- ifelse( (botlim <= (adjusted.output$ds.out-fut.targ) & (adjusted.output$ds.out-fut.targ) < toplim), 
                       yes=1, no=NA)
   out.list <- adjusted.output #Everything should be returned as-is, unless something neat happens
-  print(test$qc.mask)
   if(test$qc.mask=='on'){
     out.list$qc.mask <- mask.vec
   }
   if(test$adjust.out=='on'){ #The 'off/na thing is distracting  ##Switched from !='na' to 'on'
-#    adjust.vec <- ifelse( (abs(adjusted.output$data-fut.targ) <= correct.factor), 
-#                          yes=adjusted.output$data, no=fut.targ)
     adjust.vec <- ifelse( (is.na(mask.vec)), yes=fut.targ, no=adjusted.output$ds.out)
     out.list$ds.out <- adjust.vec
   }else{

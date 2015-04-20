@@ -20,12 +20,6 @@ SetDSMethodInfo <- function(ds.method, predictor.vars=list('na')){
          "BCQM" = setBiasCorrection(), 
          "EDQM" = setEquiDistant(), 
          "CFQM" = setChangeFactor(),
-         "BCQM_DF" = setBiasCorrection(), 
-         "EDQM_DF" = setEquiDistant(), 
-         "CFQM_DF" = setChangeFactor(),
-         "QMAP" = setChangeFactor(),
-         "DeltaSD" = setDeltaSD(),
-         "EDQMv2" = setEquiDistant(),
          'multi.lm' = setMultiLM(),
                 ReturnDownscaleError(ds.method))
   #Function returns nothing, just sets globals
@@ -41,19 +35,6 @@ SetDSMethodInfo <- function(ds.method, predictor.vars=list('na')){
 ReturnDownscaleError <- function(ds.method){
   #Returns an error and stops the entire function if the DS method used is not supported.
   stop(paste("Downscale Method Error: the method", ds.method, "is not supported for FUDGE at this time."))
-}
-
-setSimpleLM <- function(){
- #Sets global variables if the DS method used is simple.lm
-  #Is it possible to use cross-validation with this method?
-  crossval.possible <<- TRUE
-  # Does this method use some of the same data to train the 
-  # ESD equations/quantiles AND generate the downscaled data?
-  train.and.use.same <<- TRUE #Temporarily set to TRUE for testing purposes; supposed to be FALSE
-  # What are the arguments to the args() parameter that are accepted? 
-  names.of.args <<- c("")
-  #Is it possible to use multiple predictors with this method?
-  supports.multivariate <<- FALSE
 }
 
 setCDFt<- function(){
