@@ -318,7 +318,7 @@ ds.out.filename = WriteNC(out.file,ds$esd.final,target.var,
                           #prec=list.target$att_table[[target.var]]$prec,
                           prec='double',
                           units=list.target$att_table[[target.var]]$units,
-                          lname=paste('Downscaled', target.var), #list.fut$long_name$value
+                          lname=paste('Downscaled', list.target$att_table[[target.var]]$long_name), #list.fut$long_name$value
                           cfname=list.target$att_table[[target.var]]$standard_name, verbose=TRUE 
                           )
 

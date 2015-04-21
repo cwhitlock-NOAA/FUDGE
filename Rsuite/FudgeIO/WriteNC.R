@@ -110,7 +110,7 @@ WriteNC <-  function(filename,data.array,var.name,
     }
        
     #1-5 alternate structure
-    bnds <- ncdim_def(name="bnds", longname = 'bounds', units='', vals=seq(1:2), create_dimvar=FALSE)
+    bnds <- ncdim_def(name="bnds", longname = 'bnds' , units='', vals=seq(1:2), create_dimvar=TRUE) #'bounds', FALSE
     
     for (v in 1:length(var.data)){
       var <- names(var.data)[v]
@@ -189,22 +189,22 @@ WriteNC <-  function(filename,data.array,var.name,
       }
     }
     
-#     #Link axes to the dimensions
-#     ncatt_put(nc.obj,"time","axis",'T')
-#     ncatt_put(nc.obj,"lat","axis",'Y')
-#     ncatt_put(nc.obj,"lon","axis",'X')
-# 
-#       #Link bounds variables to the corresponding dims
-#       ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
-#       ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
-#       ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
-#     #And establish long names in the code
-#     ncatt_put(nc.obj,"time","standard_name","time")
-#     ncatt_put(nc.obj, "time", "long_name", "time")
-#     ncatt_put(nc.obj,"lat","standard_name","latitude")
-#     ncatt_put(nc.obj,"lat","long_name","latitude")
-#     ncatt_put(nc.obj,"lon","standard_name","longitude")
-#     ncatt_put(nc.obj,"lon","long_name","longitude")
+    #Link axes to the dimensions
+    ncatt_put(nc.obj,"time","axis",'T')
+    ncatt_put(nc.obj,"lat","axis",'Y')
+    ncatt_put(nc.obj,"lon","axis",'X')
+
+      #Link bounds variables to the corresponding dims
+      ncatt_put(nc.obj, "lat", 'bounds', 'lat_bnds')
+      ncatt_put(nc.obj, "lon", 'bounds', 'lon_bnds')
+      ncatt_put(nc.obj, "time", 'bounds', 'time_bnds')
+    #And establish long names in the code
+    ncatt_put(nc.obj,"time","standard_name","time")
+    ncatt_put(nc.obj, "time", "long_name", "time")
+    ncatt_put(nc.obj,"lat","standard_name","latitude")
+    ncatt_put(nc.obj,"lat","long_name","latitude")
+    ncatt_put(nc.obj,"lon","standard_name","longitude")
+    ncatt_put(nc.obj,"lon","long_name","longitude")
     
     ##CEW: figure out how to add these in once rest are tested
 #    ncatt_put(nc.obj,var.dat[[var.name]],"units",units)
