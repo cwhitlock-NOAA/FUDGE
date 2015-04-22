@@ -62,7 +62,7 @@ target.time.window <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemas
 #------------- method name k-fold specs-----------------------#
 #        ds.method <- 'CDFt' 
 ds.method <- 'multi.lm'
-	ds.experiment <- paste0('RRtxp1-', ds.method, '-C34atTx_improved4L01K00')
+	ds.experiment <- paste0('RRtxp1-', ds.method, '-C34atTx_improved5L01K00')
 	k.fold <- 0 
 	
 #-------------- output -----------------------#

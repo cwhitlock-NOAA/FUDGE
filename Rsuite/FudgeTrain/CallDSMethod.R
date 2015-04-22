@@ -25,21 +25,33 @@
 #' TODO: Find better way to initialize the output storage vectors
 #' TODO: Seriously, THERE HAS GOT TO BE A LESS COMPLEX WAY
 
-CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=NULL, ds.var='irrelevant', att.table=NA){
+CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=NULL, ds.var='irrelevant', 
+                         att.table=NA, remove.ds.missvals = TRUE){
   #  library(CDFt)
-  #print(paste("start time:", date()))
+  
+  if(remove.ds.missvals){
+#     print(summary(train.predict))
+#     save(file="~/Code/testing/test_out.R", list=c('train.predict'))
+    train.predict = lapply(train.predict, remove.missvals)
+    train.target = train.target[!is.na(train.target)]
+    out.reference <- esd.gen[[1]]     #Save the locations of missing values in the output vector
+    esd.gen = lapply(esd.gen, remove.missvals)
+  }
   out <- switch(ds.method, 
-                "simple.lm" = callSimple.lm(train.predict, train.target, esd.gen),
+                #"simple.lm" = callSimple.lm(train.predict, train.target, esd.gen),
                 'CDFt' = callCDFt(train.predict, train.target, esd.gen, args),
                 'simple.bias.correct' = callSimple.bias.correct(train.predict, train.target, esd.gen, args),
-                'general.bias.correct' = callGeneral.Bias.Corrector(train.predict, train.target, esd.gen, args),
+                #'general.bias.correct' = callGeneral.Bias.Corrector(train.predict, train.target, esd.gen, args),
                 "BCQM" = callBCQMv2(train.target, train.predict, esd.gen, args), 
                 "EDQM" = callEDQMv2(train.target, train.predict, esd.gen, args), 
                 "CFQM" = callCFQMv2(train.target, train.predict, esd.gen, args), 
                 "DeltaSD" = callDeltaSD(train.target, train.predict, esd.gen, args), #, ds.var)
                 "multi.lm"=callMulti.lm(train.predict, train.target, esd.gen, args),
                 ReturnDownscaleError(ds.method))
-  #print(paste("stop time:", date()))
+  if(remove.ds.missvals){
+    out.reference[!is.na(out.reference)] <- out
+    out <- out.reference
+  }
   return(out)  
 }
 
@@ -49,8 +61,11 @@ ReturnDownscaleError <- function(ds.method){
 }
 
 callMulti.lm <- function(pred, targ, new, args=NA){
-  #Calls R's LM function on one or more variables present
-  #in the current data
+  #'Calls R's lm() function using targ as a function
+  #'of linear variability of one or more variables in 
+  #'pred, and then uses the data in new to predict
+  #'the future results. 
+  #'Does not currently take any arguments
     test.list <- c('target'=list(targ), pred)
     test.prod <- data.frame(test.list)
   lm.model <- lm(data=test.prod)
@@ -62,9 +77,17 @@ callMulti.lm <- function(pred, targ, new, args=NA){
 
 
 callCDFt <- function (pred, targ, new, args){
-  #Calls the CDFt function
-  #If no argument is provided for npas, defaults to 
-  #npas=length(targ)
+  #' Calls the CDFt function (Vrac et. al 2009) on a single variable
+  #' predictor and target, returning the downscaled (DS) output.
+  #' Takes as an argument
+  #' npas: The number of quantiles to split the input dataset into. 
+  #' If dev is 0 or 'default', uses the number of observations in either the
+  #' future or historical datasets, depending upon which has fewer observations.
+  #' dev : The number of deviations used when calculating. 
+  #' @citation P.-A. Michelangeli, M. Vrac, H. Loukos. "Probabilistic downscaling approaches: 
+  #' @citation Application to wind cumulative distribution functions", 
+  #' @citation Geophys. Res. Lett., doi:10.1029/2009GL038401, 2009)
+     
   ###Obtain required arguments (and throw errors if not specified)
   if(!is.null(args$dev)){
     dev <- args$dev
@@ -109,10 +132,12 @@ callCDFt <- function (pred, targ, new, args){
 }
 
 callSimple.bias.correct <- function(pred, targ, new, args){
-  #Performs a simple bias correction adjustment,
-  #applying the mean difference between the
-  #predictor and target over the time series
-  #to the esd.gen dataset to give downscaled data.
+  #'Performs a simple bias correction adjustment to a 
+  #'single variable series, applying the mean difference 
+  #'between the predictor and target datasets in the 
+  #'historical period to the esd.gen dataset
+  #'to generate downscaled data. 
+  #'It takes no arguments. 
   bias <- mean(unlist(pred)-targ)
   new.targ <- unlist(new)-bias
   return(new.targ)
@@ -121,13 +146,18 @@ callSimple.bias.correct <- function(pred, targ, new, args){
 callDeltaSD <- function(LH,CH,CF,args){
   #'@author carlos.gaitan@noaa.gov
     #'@description The script uses the Delta Method to downscale coarse res. climate variables  
+    #'over a single variable
     #'@param LH: Local Historical (a.k.a. observations)
     #'@param CH: Coarse Historical (a.k.a. GCM historical)
     #'@param CF: Coarse Future (a.k.a GCM future)
-    #'@param args: A list containing two arguments: deltatype, one of 'mean' or 'median', 
-    #' which will be used to determine what single value will be used for the difference
-    #' between the CH and CF, and deltaop, one of 'ratio' or 'add', which will be used 
-    #' to determine the mthod for calculating the delta
+    #'@param args: A list containing three arguments: 
+    #'  @param deltatype, one of 'mean' or 'median', which will be used to determine 
+    #'  what single value will be used for the difference between the CH and CF
+    #'  @param deltaop, one of 'ratio' or 'add', which will be used to determine 
+    #'  the mthod for calculating the delta
+    #'  @param keep.zeroes, a value of TRUE or FALSE that controls whether to use all days for
+    #'  calculating the delta (TRUE), or use only those days for which the delta was greater
+    #'  than zero (FALSE)
     #'Uses the difference (ratio or subtraction) between CF and CH means or medians to calculate
     #' a delta that is applied to the LH (observational) data
     #'@return SDF: Downscaled Future (Local)
@@ -235,13 +265,13 @@ delta.downscale <- function(delta.targ, delta.hist, delta.fut, deltatype, deltao
 
 
 callEDQMv2<-function(LH,CH,CF,args){ 
-  #'Performs an equidistant correction adjustment
-  # LH: Local Historical (a.k.a. observations)
-  # CH: Coarse Historical (a.k.a. GCM historical)
-  # CF: Coarse Future (a.k.a GCM future)
-  #'Cites Li et. al. 2010
-  #' Calls latest version of the EDQM function
-  #' as of 12-29
+  #'Performs an equidistant correction adjustment on a single variable
+  #'over the historical period, in order to generate downscaled data.
+  #' @param LH: Local Historical (a.k.a. observations)
+  #' @param CH: Coarse Historical (a.k.a. GCM historical)
+  #' @param CF: Coarse Future (a.k.a GCM future)
+  #' Contains no other arguments in the args parameter.
+  #'@citation Li et. al. 2010
   
   #Unlist data from its input form
   CF <- unlist(CF)
@@ -287,10 +317,16 @@ callEDQMv2<-function(LH,CH,CF,args){
 
 ###CG DS method
 callCFQMv2<-function(LH,CH,CF,args){
-  #'Calls the latest version of the CFQM function
-  #'as of 12-29
-  #'2-27-2015 edit: added an argument for determining
-  #'whether data is sorted by the CH or CF vectors
+  #'Performs an change-factor correction adjustment on a single variable
+  #'over the historical period, in order to generate downscaled data.
+  #' @param LH: Local Historical (a.k.a. observations)
+  #' @param CH: Coarse Historical (a.k.a. GCM historical)
+  #' @param CF: Coarse Future (a.k.a GCM future)
+  #' Contains no other arguments in the args parameter.
+  #'2-27-2015 edit: added an argument in args, sort, for determining
+  #'whether data is sorted by the CH ('historical'), CF ('future'), 
+  #'or LH ('target') vectors.
+
   # Obtain options
   if(!is.null(args$sort)){
     #can be one of 'future' or 'historical'
@@ -369,8 +405,13 @@ callCFQMv2<-function(LH,CH,CF,args){
 
 
 callBCQMv2<-function(LH,CH,CF,args){
-  #' Calls latest version of BCQM function
-  #' as of 12-29
+  #'Performs an bias-correction quantile mapping on a single variable
+  #'over the historical period, in order to generate downscaled data.
+  #' @param LH: Local Historical (a.k.a. observations)
+  #' @param CH: Coarse Historical (a.k.a. GCM historical)
+  #' @param CF: Coarse Future (a.k.a GCM future)
+  #' Contains no other arguments in the args parameter.
+
   lengthCF<-length(CF)
   lengthCH<-length(CH)
   lengthLH<-length(LH)

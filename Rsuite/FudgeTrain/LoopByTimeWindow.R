@@ -174,9 +174,11 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
         if(create.ds.out){
           #TODO CEW: Should this looping structure be more nested? The assignment to downscale.vec might not be nessecary
           temp.out <- CallDSMethod(ds.method = downscale.fxn,
-                                   train.predict = lapply(kfold.predict, remove.missvals), #removing for multivariate lm method
-                                   train.target = kfold.target[!is.na(kfold.target)],      #add back in on a method-by-method basis
-                                   esd.gen = lapply(kfold.gen, remove.missvals),           #some need it, some don't
+                                   train.predict = lapply(kfold.predict, "[", 
+                                                          !is.na(mask.struct[[1]]$masks[[window]])), #remove missvals pointed to by mask
+                                   train.target = kfold.target[!is.na(kfold.target)],                #any missvals not in mask
+                                   esd.gen = lapply(kfold.gen, "[",                                 #will be removed by CallDSMethod
+                                                    !is.na(mask.struct[[3]]$masks[[window]])),       #(though that option can be turned off)
                                    att.table=att.table,
                                    args=downscale.args, 
                                    ds.var=ds.var)
