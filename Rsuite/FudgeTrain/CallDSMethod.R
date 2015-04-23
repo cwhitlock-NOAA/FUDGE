@@ -26,10 +26,11 @@
 #' TODO: Seriously, THERE HAS GOT TO BE A LESS COMPLEX WAY
 
 CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=NULL, ds.var='irrelevant', 
-                         att.table=NA, remove.ds.missvals = TRUE){
+                         att.table=NA, remove.ds.missvals = FALSE){
   #  library(CDFt)
   
   if(remove.ds.missvals){
+    #Alternate missing value removal for missvals not in the time windowing mask - may not, strictly speaking, be needed
     train.predict = lapply(train.predict, remove.missvals)
     train.target = train.target[!is.na(train.target)]
     out.reference <- esd.gen[[1]]     #Save the locations of missing values in the output vector
@@ -47,6 +48,7 @@ CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=N
                 "multi.lm"=callMulti.lm(train.predict, train.target, esd.gen, args),
                 ReturnDownscaleError(ds.method))
   if(remove.ds.missvals){
+    #Same alternate missval removal structure as earlier
     out.reference[!is.na(out.reference)] <- out
     out <- out.reference
   }
