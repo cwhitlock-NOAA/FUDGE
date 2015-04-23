@@ -79,6 +79,9 @@ LoopByTimeWindow <- function(train.predictor=NULL, train.target=NULL, esd.gen, m
     #If there are no masks (so whole time series is used)
     mask.data.by.time.window <- FALSE
     num.masks <- 1
+    mask.struct <- list(rep(1, length(train.predictor[[1]])), 
+                        rep(1, length(train.target)), 
+                        rep(1, length(esd.gen[[1]])))
   }
   ###Tjis is so problematic from a multivariate standpoint
   #downscale.length <- length(esd.gen)

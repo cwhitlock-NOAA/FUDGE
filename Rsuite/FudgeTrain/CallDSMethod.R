@@ -30,8 +30,6 @@ CallDSMethod <- function(ds.method, train.predict, train.target, esd.gen, args=N
   #  library(CDFt)
   
   if(remove.ds.missvals){
-#     print(summary(train.predict))
-#     save(file="~/Code/testing/test_out.R", list=c('train.predict'))
     train.predict = lapply(train.predict, remove.missvals)
     train.target = train.target[!is.na(train.target)]
     out.reference <- esd.gen[[1]]     #Save the locations of missing values in the output vector

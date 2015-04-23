@@ -54,7 +54,7 @@ rm(list=ls())
                                  target.var, '/US48/OneD')
 	target.time.window <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/timemasks/maskdays_bymonth_19790101-20081231.nc'
 #------------- method name k-fold specs-----------------------#
-        #ds.method <- 'BCQM' 
+        ds.method <- 'CDFt' 
 ds.method <- 'multi.lm'
 #	ds.experiment <- 'PMtxp1-BCQM-Etest-A00r12X01K00' 
 ds.experiment <- paste0('PMtxp1-', ds.method, "-E-", "A00r12X01K00")

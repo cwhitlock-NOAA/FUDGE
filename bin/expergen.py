@@ -503,6 +503,7 @@ def main():
         #print "debug............msub turned ",msub
         ############################### 2 ################################################################
 	#target_time_window,hist_time_window,fut_time_window
+	#CEW hasty edits to support single variable case
         script2Loc = basedir+"/utils/bin/"+"create_runscript"
         create_runscript_cmd = script2Loc+" "+str(lons)+" "+str(lone)+" "+str(expconfig)+" "+str(basedir)+" "+target+" "+method+" "+target_dir+" "+hist_pred_dir+" "+fut_pred_dir+" "+outdir+" "+str(file_j_range)+" "+tstamp+" "+str(target_file_start_time)+" "+str(target_file_end_time)+" "+str(hist_file_start_time)+" "+str(hist_file_end_time)+" "+str(fut_file_start_time)+" "+str(fut_file_end_time)+" "+str(spat_mask)+" "+str(region)+" "+auxcustom+" "+target_time_window+" "+hist_time_window+" "+fut_time_window+" "+sbase+" "+idirsuffix+" "+"'"+str(predictor)+"'"
 	#print create_runscript_cmd

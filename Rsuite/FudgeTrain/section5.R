@@ -1,26 +1,26 @@
-#'QCDSValues.R
+#'section5.R
 #'
-#'Creates a mask of the same dimensions as the downscaled data 
-#'for which the default behavior is that a 1 means that the data
-#'passes the QC check, and a 0 means that the data does not pass the QC
-#'check. This behavior can change depending upon the QC function in question,
-#'but this is the general behavior to keep in mind.
+#'Calls post-downscaling adjustments on the downcsaled data, in keeping with section
+#'5 of the FUDGE schematic. 
 #'
+#'------Parameters related to instructions -------
 #'@param s5.instructions: A list of commands controlling which adjustment steps
 #'are preformed, and in what order, as well as whether ar QC mask is to be calculated
 #'at any point. Consists of a list of lists with elements of the form
 #'list(type='SBiasCorr', qc.mask='on', adjust.out='off', args=list('na'))
 #'@param var: The variable being downscaled. 
-#'------Parameters required for kdAdjust-------
-#'#'@param data: The data undergoing a qc check/adjustment steps
-#'@param hist.pred: The historic predictor of a dataset
-#'@param hist.targ: 
-#'@param fut.pred: 
-#'------Parameters related to time windowing----
+#'------Parameters related to datasets -------
+#'@param data: The downscaled data undergoing the qc and adjustment steps
+#'@param hist.pred: The historic predictor used to generate the downscaled data
+#'@param hist.targ: The historic target used to generate the downscaled data
+#'@param fut.pred:  The future predictor used to generate the downscaled data
 #'
-#'@returns A vector of values for the time series at the individual x,y, point
-#'with 0 for all values that did not pass the test and 1 for all values that did.
-#'CEW edit 10-22 to incorporate the proposed looping structure
+#'@returns a list containing two components: 
+#'ds.out: An array of the same dimensions as the input downscaled data, adjusted by the section
+#'5 functions. Is equal to the input downscaled data if no adjustments took place in section 5.
+#'qc.mask: A mask of the same dimensions of the input downscaled data, in which every 1 represents 
+#'an unflagged value, and every NA represents a value flagged as suspicious. Is NULL if no qc mask 
+#'is generated from section 5. 
 callS5Adjustment<-function(s5.instructions=list('na'),
                    data = NA, #downscaled data - from this run or another
                            data.atts = NA,
@@ -143,6 +143,7 @@ callPRPostproc <- function(test, input, adjusted.output){
   }else{
     message('Not applying wetday mask. Output may have fewer days without precipitation than expected.')
   }
+  
   #Obtain mask of days that will be eliminated
   out.mask <- MaskPRSeries(adjusted.output$ds.out, units=input$data.atts[[1]]$units, index=test$qc_args$thold)
   #Apply the conserve option to the data
