@@ -89,6 +89,8 @@ callPRPreproc <- function(test, input, postproc.output){
                             lopt.drizzle=lopt.drizzle, 
                             lopt.conserve=lopt.conserve, 
                             zero.to.na=apply.0.mask)
+  save(file="~/Code/testing/pr_expresso.R", list=c('temp.out', 'test', 'input'))
+  stop('examine results')
     fut.prmask <- temp.out$future$pr_mask
     ###TODO: Change specifications to get a better name for this.
     ###Indexing by method is going to be REALLY HANDY

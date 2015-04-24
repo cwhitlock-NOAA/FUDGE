@@ -2,9 +2,11 @@
 rm(list=ls())
 
 #--------------predictor and target variable names--------#
-	predictor.vars <- list('tasmax', 'tasmin') 
-#predictor.vars <- list('tasmax') 
-	target.var <- 'tasmax'
+# 	predictor.vars <- list('tasmax', 'tasmin') 
+# #predictor.vars <- list('tasmax') 
+# 	target.var <- 'tasmax'
+predictor.vars <- list('pr')
+target.var <- 'pr'
 #--------------grid region, mask settings----------#
         grid <- 'SCCSC0p1' 
         spat.mask.dir_1 <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/geomasks/red_river_0p1/OneD/' 
