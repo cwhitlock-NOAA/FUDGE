@@ -89,27 +89,28 @@ callPRPreproc <- function(test, input, postproc.output){
                             lopt.drizzle=lopt.drizzle, 
                             lopt.conserve=lopt.conserve, 
                             zero.to.na=apply.0.mask)
-  save(file="~/Code/testing/pr_expresso.R", list=c('temp.out', 'test', 'input'))
-  stop('examine results')
+#   save(file="~/Code/testing/pr_expresso.R", list=c('temp.out', 'test', 'input'))
+#   stop('examine results')
     fut.prmask <- temp.out$future$pr_mask
     ###TODO: Change specifications to get a better name for this.
     ###Indexing by method is going to be REALLY HANDY
     pr_mod <- postproc.output$propts
     pr_mod$qc_args$fut.prmask <- fut.prmask
+  #Add back into the original structure
+  input$hist.targ        <- temp.out$ref$data   #only a single target variable
+  input$hist.pred[[var]] <- temp.out$adjust$data
+  input$fut.pred[[var]]  <- temp.out$future$data
     if(apply.0.mask){
       #only apply the mask if it it will result in more missing values
       #technically, it's a time mask - but it can be 3-D
       #...wait a minute - what were the dimensions of this mask again?
       #Answer: should be exactly the same as the dimensions of the input data.
       #Looks like a job for apply.any.mask indeed.
+      #This should make sure that when extra missing values are added, all datasets
+      #in the predictor datasets will have the missinv values added back in
       input$hist.targ        <- (temp.out$ref$data   * temp.out$ref$pr_mask)
-      input$hist.pred[[var]] <- (temp.out$adjust$data* temp.out$adjust$pr_mask)
-      input$fut.pred[[var]]  <- (temp.out$future$data* temp.out$future$pr_mask)    
-    }else{
-      #Add back into the original structure
-      input$hist.targ        <- temp.out$ref$data   #only a single target variable
-      input$hist.pred[[var]] <- temp.out$adjust$data
-      input$fut.pred[[var]]  <- temp.out$future$data
+      input$hist.pred <- lapply(input$hist.pred, "*", temp.out$adjust$pr_mask)
+      input$fut.pred  <- lapply(input$fut.pred,  "*", temp.out$future$pr_mask)    
     }
     postproc.output$propts <- pr_mod
   return(list('input'=input,

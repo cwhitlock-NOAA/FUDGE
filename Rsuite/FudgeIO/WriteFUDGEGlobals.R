@@ -35,13 +35,6 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
   if(grid_region!='somewhere'){
     comment.info <- paste(comment.info, 'on the subset', mask_region, 'of the', grid_region, 'grid ')
   }
-  #Note: is.adjusted and is.qcmask can both be true, but is.qcmask only reports on the adjustments that took place before the mask
-#   if(is.transform){
-#     comment.info <- paste(comment.info, 'transformed and back-transformed with', transform)
-#   }
-#   if(pr.process){
-#     comment.info <- paste(comment.info, 'adjusted for precipitation,')
-#   }
   if(is.pre.ds.adjust){
     pre.methods <- lapply(pre.ds.adjustments, '[[', "type")
     comment.info <- paste(comment.info, "adjusted with the ", convert.list.to.string(pre.methods),
@@ -99,10 +92,7 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
     argstring <- paste(argnames, args, sep="=", collapse=", ")
     info <- paste(info, "Arguments used in downscaling function: ", argstring, "; ", sep="")
   }
-#   if(pr.process){
-#     pr.optstring <- paste(names(pr_opts), pr_opts, sep="=", collapse=", ")
-#     info <- paste(info, "Precipitation pre-processing and post-processing options: ", pr.optstring, "; ", sep="")
-#   }
+  
   if(is.pre.ds.adjust || is.post.ds.adjust){
     #Section 5 and Section 3 stuff
     if(is.qcmask){

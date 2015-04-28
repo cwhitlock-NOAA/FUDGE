@@ -356,7 +356,7 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
   for (var in predictor.vars){
     ds$qc.mask[is.na(ds$qc.mask)] <- as.double(1.0e20)
     qc.var <- paste(var, 'qcmask', sep="_")
-    if(Sys.info()['nodename']=="cew"){ #'cew'
+    if(Sys.info()['nodename']=="ldt-4078325"){ #'cew'
       #only activated for testing on CEW workstation
       qc.outdir <- paste(output.dir, "/QCMask/", sep="")
       qc.file <- paste(qc.outdir, sub(pattern=var, replacement=qc.var, out.filename), sep="") #var, "-",
@@ -371,14 +371,6 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
       print("ERROR! Dir creation script not beahving as expected!")
     }
     message(paste('attempting to write to', qc.file))
-#     qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
-#                               xlon=list.target$dim$lon,ylat=list.target$dim$lat,
-#                               downscale.tseries=list.fut$dim$time, 
-#                               var.data=c(list.target$vars, list.fut$vars),
-#                               prec='float',missval=1.0e20,
-#                               units="1",
-#                               lname=paste('QC Mask')
-#     )
     qc.out.filename = WriteNC(out.file,ds$qc.mask,qc.var,
                               dim.list=c(list.target$dim, list.fut$dim),
                               var.data=c(list.target$vars, list.fut$vars),
