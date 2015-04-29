@@ -497,7 +497,7 @@ def main():
          sys.exit(0)
         #cprint output, errors
 	#cprint "----Log-----"
-        print output,errors
+        #print output,errors
         ###############################################################################################
         print "1- completed\n"
         #print "debug............msub turned ",msub
@@ -524,7 +524,8 @@ def main():
         
         ###################################### 3 ################################################################
         script3Loc = basedir+"/utils/bin/"+"create_master_runscript"
-        create_master_cmd= script3Loc+" "+str(lons)+" "+str(lone)+" "+str(predictor)+" "+method+" "+sbase+" "+expconfig+" "+file_j_range+" "+tstamp+" "+str(ppn)+" "+str(msub)
+#CEW edit: predictor to target for multivariate
+        create_master_cmd= script3Loc+" "+str(lons)+" "+str(lone)+" "+str(target)+" "+method+" "+sbase+" "+expconfig+" "+file_j_range+" "+tstamp+" "+str(ppn)+" "+str(msub)
         print "Step 3: --------------MASTER SCRIPT GENERATION-----------------------"#+create_master_cmd
 	#CEW edit to diagnose older behavior
 	print create_master_cmd
