@@ -411,15 +411,15 @@ callBCQMv2<-function(LH,CH,CF,args){
   #' @param CH: Coarse Historical (a.k.a. GCM historical)
   #' @param CF: Coarse Future (a.k.a GCM future)
   #' Contains no other arguments in the args parameter.
+  #' 
+     #Unlist data from its input form
+     CF <- unlist(CF)
+     CH <- unlist(CH)
 
   lengthCF<-length(CF)
   lengthCH<-length(CH)
   lengthLH<-length(LH)
-  
-  #Unlist data from its input form
-  CF <- unlist(CF)
-  CH <- unlist(CH)
-  
+
   if (lengthCF>lengthCH) maxdim=lengthCF else maxdim=lengthCH
   
   # first define vector with probabilities [0,1]

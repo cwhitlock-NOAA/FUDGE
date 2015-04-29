@@ -22,10 +22,17 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
   #'  as of 3-10, now REQUIRED for writing to file. 
   #'  $vars: The variables *not* the variable of interest that use the dimensions queried 
   #'      (i.e. lat_bnds, j_offset, height).
-  #'  $cfname: The CF-standard name of the variable. Only applies to tasmax, tasmin and pr; for all other
-  #'  vars, the short name is the cfname
-  #'  $long_name: The long name of the variable. Derived from the long_name vale of the netCDF object.
-  #'  $units: The units of the variable of interest. Derived from the units value of the netCDF object.
+  #'  $att_table: A named list of attributes relating to the variable and the netCDF file it comes
+  #'  from. Includes the following elements:    
+  #'    $standard_name: The CF-standard name of the variable. Only applies to tasmax, tasmin, pr and corresponding
+  #'       anomaly datasets; for all other vars, the short name is the standard name. Also referred to as the
+  #'       cfname.
+  #'    $long_name: The long name of the variable. Derived from the long_name value of the netCDF object.
+  #'    $units: The units of the variable of interest. Derived from the units value of the netCDF object.
+  #'    $prec: The precicion of the variable in the NetCDF file. Used for writing to file via WriteNC; 
+  #'      if not present, defaults to float.
+  #'    $climatology: The full path to the climatology dataset used by the series. Is NA if the variable was
+  #'    not an anomaly series
   #'
   #'@include ncdf4, ncdf4.helpers
 
@@ -66,11 +73,15 @@ ReadNC <- function(nc.object,var.name=NA,dstart=NA,dcount=NA,dim='none',verbose=
     att_list <- list('units'=ncatt_get(nc.object, var.name, 'units')$value, 
                       'standard_name'=ncatt_get(nc.object, var.name, 'standard_name')$value,
                       'long_name'=ncatt_get(nc.object, var.name, 'long_name')$value,
-                      'prec'=nc.object$var[[var.name]]$prec
+                      'prec'=nc.object$var[[var.name]]$prec, 
+                     'climatology' = ncatt_get(nc.object, 0, 'climatology')$value
                       )
     #Correct prec after the fact
     if(is.null(att_list$prec)){
       att_list$prec <- 'float'
+    }
+    if(is.null(att_list$climatology)){
+      att_list$climatology <- NA
     }
     att_table <- list()
     att_table[[var.name]] <- att_list

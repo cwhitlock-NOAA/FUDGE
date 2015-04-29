@@ -8,6 +8,7 @@
 #'and the variables describing the produced downscaled output. 
 #'@param label.training
 #'@param downscaling.method
+#'CEW edit 4-28: added climatology as a variable to be written to file
 WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
                          label.training=NA,downscaling.method=NA,reference=NA,label.validation=NA,
                          institution='NOAA/GFDL',version='undefined',title="undefined", 
@@ -19,7 +20,8 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
                          is.pre.ds.adjust=FALSE,
                          pre.ds.adjustments=list('na'),
                          is.post.ds.adjust=FALSE,
-                         post.ds.adjustments=list('na')){
+                         post.ds.adjustments=list('na'), 
+                              climatology = NA){
   #a1r: removing count.dep.samples=NA,count.indep.samples=NA from function params
   #'Adds global attributes to existing netCDF dataset 
   #'#TODO CEW: What is the purpose of the comments attribute? 
@@ -171,6 +173,9 @@ WriteFUDGEGlobals <- function(filename,kfold,predictand=NA,predictor=NA,
   }
   if(is.qcmask){
     ncatt_put(nc.object, paste(predictand, "_qcmask",sep=""), "comments", "Flagged cases = missing; Non-flagged cases = 1.0" )
+  }
+  if(!is.na(climatology)){
+   ncatt_put(nc.object, 0, "climatology", climatology) 
   }
   nc_close(nc.object) 
   return(filename)

@@ -3,10 +3,10 @@ rm(list=ls())
 
 #--------------predictor and target variable names--------#
 # 	predictor.vars <- list('tasmax', 'tasmin') 
-# #predictor.vars <- list('tasmax') 
-# 	target.var <- 'tasmax'
-predictor.vars <- list('pr')
-target.var <- 'pr'
+predictor.vars <- list('tasmax') 
+	target.var <- 'tasmax'
+# predictor.vars <- list('pr')
+# target.var <- 'pr'
 #--------------grid region, mask settings----------#
         grid <- 'SCCSC0p1' 
         spat.mask.dir_1 <- '/archive/esd/PROJECTS/DOWNSCALING/3ToThe5th/masks/geomasks/red_river_0p1/OneD/' 
@@ -78,9 +78,9 @@ ds.method <- 'EDQM'
 args=list('na')
  #Number of "cuts" for which quantiles will be empirically estimated (Default is 100 in CDFt package).
 #-------------- pp ---------------------------#
-pr_opts=list(pr_threshold_in='us_trace',pr_freqadj_in='off',pr_conserve_in='on',
-             pr_threshold_out='us_trace',pr_conserve_out='on', #'us_trace'
-             apply_0_mask='on')
+# pr_opts=list(pr_threshold_in='us_trace',pr_freqadj_in='off',pr_conserve_in='on',
+#              pr_threshold_out='us_trace',pr_conserve_out='on', #'us_trace'
+#              apply_0_mask='on')
 
 #  pr_opts=list(pr_threshold_in='us_trace',pr_freqadj_in='off',pr_conserve_in='on',pr_threshold_out='us_trace',pr_conserve_out='on')
         #mask.list <- list(mask1=list(type='SBiasCorr',adjust.out='off',qc.mask='on',qc_options=list(botlim=-6.,toplim=6.)))

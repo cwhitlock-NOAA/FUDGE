@@ -333,14 +333,12 @@ if(Sys.getenv("USERNAME")=='cew'){
   #Someone else is running it, modules are available and presumably git branch not needed
   git.needed=FALSE
 }
-
+print(list.fut$att_table$climatology)
 WriteFUDGEGlobals(ds.out.filename,k.fold,target.var,predictor.vars,label.training,ds.method,
                   configURL,label.validation,institution='NOAA/GFDL',
                   version=as.character(parse(file=paste(FUDGEROOT, "version", sep=""))),
                   title=paste(simpleCap(target.var), "downscaled from", 
-                  convert.list.to.string(predictor.vars), "with", ds.method, ds.experiment),
-#                   title=paste(target.var, "downscaled with", 
-#                               ds.method, ds.experiment), 
+                              convert.list.to.string(predictor.vars), "with", ds.method, ds.experiment),
                   ds.arguments=args, time.masks=tmask.list, ds.experiment=ds.experiment, 
                   grid_region=grid, mask_region=ds.region,
                   time.trim.mask=fut.time.trim.mask, 
@@ -348,7 +346,8 @@ WriteFUDGEGlobals(ds.out.filename,k.fold,target.var,predictor.vars,label.trainin
                   is.pre.ds.adjust=(length(pre_ds) > 0),
                   pre.ds.adjustments=pre_ds,
                   is.post.ds.adjust=(length(post_ds_adj) > 0),
-                  post.ds.adjustments=post_ds_adj)
+                  post.ds.adjustments=post_ds_adj, 
+                  climatology=list.fut$att_table[[target.var]]$climatology)
 message(paste('Downscaled output file:',ds.out.filename,sep=''))
 #}
 
@@ -371,7 +370,7 @@ if(qc.maskopts$qc.inloop || qc.maskopts$qc.outloop){ ##Created waaay back at the
       print("ERROR! Dir creation script not beahving as expected!")
     }
     message(paste('attempting to write to', qc.file))
-    qc.out.filename = WriteNC(out.file,ds$qc.mask,qc.var,
+    qc.out.filename = WriteNC(qc.file,ds$qc.mask,qc.var,
                               dim.list=c(list.target$dim, list.fut$dim),
                               var.data=c(list.target$vars, list.fut$vars),
                               prec='float',
